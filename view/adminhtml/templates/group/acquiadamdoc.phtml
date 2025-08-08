@@ -1,0 +1,765 @@
+<?php
+$entity_id = $block->getEntityId();
+if (isset($entity_id) && !empty($entity_id)) {
+    $entity_id = $block->getEntityId();
+} else {
+    $entity_id = 0;
+}
+$currentProduct = "current_product";
+$product = $block->getProduct($currentProduct);
+$productId = $product->getId();
+$admin = $block->getBackendArea();
+?>
+
+<div class="preloader" id="preloader" style="height:0px">
+    <img class="animation__shake" src="<?= $block->escapeHtml($block->getPreloader()); ?>"
+    alt="acquiadamLoader" height="400" width="400" style="display:none;">
+</div>
+<style>
+    .success-msg-sync,
+    .error-msg-sync {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 3px 3px 3px 3px;
+    }
+
+    .success-msg-sync {
+        color: #270;
+        background-color: #DFF2BF;
+    }
+
+    .error-msg-sync {
+        color: #D8000C;
+        background-color: #FFBABA;
+    }
+
+    table{
+        display: table;
+        border-collapse: separate;
+        box-sizing: border-box;
+        text-indent: initial;
+        border-spacing: 2px;
+        border-color: grey;
+    }
+    .dynamic-row th{
+        color: #303030;
+        font-size: 1.4rem;
+        font-weight: 600;
+        background-color: #efefef;
+        border: 0;
+        border-bottom: 1px solid #fff;
+        padding: 16px;
+        text-align: left;
+        vertical-align: top;
+    }
+    .admin__control-textarea{
+        height: 135px;
+    }
+    tr {
+        display: table-row;
+        vertical-align: inherit;
+        border-color: inherit;
+    }
+    td, th {
+        padding: 16px;
+        width: 500px;
+    }
+    .url{
+        background-color: #fff;
+        border: 1px solid #adadad;
+        border-radius: 1px;
+        box-shadow: none;
+        color: #303030;
+        font-size: 1.4rem;
+        font-weight: 400;
+        height: 40px;
+        line-height: 1.36;
+        padding: -3.4rem 1rem 0.6rem;
+        transition: border-color .1s linear;
+        vertical-align: baseline;
+        width: 100%;
+    }
+    #external_document_acquiadam{
+        background-color: #eb5202;
+        border-color: #eb5202;
+        color: #ffffff;
+        text-shadow: 1px 1px 0 rgb(0 0 0 / 25%);
+    }
+</style>
+<div class="success-msg-sync" style="display:none;"></div>
+<div class="error-msg-sync" style="display:none;"></div>
+<div class="row">
+    <div class="add-video-button-container">
+        <button type="button" name="external_document_acquiadam" id="external_document_acquiadam">Acquia DAM Doc</button>
+    </div>
+</div>
+
+<table class="dynamic-rows-doc-acquiadam" id="sortable">
+    <thead>
+        <tr style="background: #efefef;">
+            <th>
+            </th>
+            <th>
+                <span>Document Name</span>
+            </th>
+            <th>
+                <span>Acquia DAM Document URL</span>
+            </th>
+            <th>
+                <span>Action</span>
+            </th>
+        </tr>
+    </thead>
+    <tbody class="tbody_dynamic_doc_acquiadam"></tbody>
+</table>
+
+<div id="popup-modal-acquiadam-Doc" style="display:none;">
+    <div id="compactViewContainerDoc"></div>
+</div>
+<input type="hidden" id="p_eid" value="<?= $block->escapeHtml($entity_id); ?>">
+<input type="hidden" id="ajax_baseurl" value="<?= $block->escapeUrl($block->getBaseUrl() . 'acquiadam/index'); ?>">
+<input type="hidden" id="form_keys" value="<?= $block->escapeHtml($block->getFormKey()); ?>">
+
+<script>
+    var drag_img = "<?= $block->escapeHtml($block->getDrag()); ?>";
+    var delete_icon = "<?= $block->escapeHtml($block->getDelete()); ?>";
+    var preloader = jQuery("#preloader");
+    var innerLoader = jQuery("#innerLoader");
+    var docInnerLoader = jQuery("#docInnerLoader");
+    var get_acquiadam_image_url = '<?= $block->escapeUrl($block->getBaseUrl()."acquiadam/index/InitAcquiaDamDocPopup") ?>';
+    var add_temp_data = '<?= $block->escapeUrl($block->getBaseUrl().$admin."/acquiadam/product/adddocdata") ?>'
+    jQuery(document).on("click", ".all-select", function () {
+        selectAllValue = jQuery(this).attr("data-selected");
+        if (selectAllValue == "true") {
+            jQuery(this).html("All Select");  
+            jQuery(this).attr("data-selected","false");
+            let jValueData = document.getElementById("jValue").value - 1;
+            for (let j = 0; j <= jValueData; j++) {
+                document.getElementById("imagecheck" + j).checked = false;
+            }
+        } else {
+            jQuery(this).html("Deselect All");  
+            jQuery(this).attr("data-selected","true");
+            let jValueData = document.getElementById("jValue").value - 1;
+            for (let j = 0; j <= jValueData; j++) {
+                document.getElementById("imagecheck" + j).checked = true;
+            }
+        }
+    });
+
+
+
+    jQuery(document).on('click','.acquiadam_url_doc button',function(){
+        var old_selected_acquiadam_doc = [];
+        
+        /* extract old doc format for new format */
+        var old_acquiadam_doc = jQuery('textarea[name="product[acquiadam_document]"]').val();
+        if(old_acquiadam_doc.trim() != ""){
+            var total_old_format_doc = old_acquiadam_doc.split(" \n");
+            if(total_old_format_doc.length > 0){
+                jQuery.each(total_old_format_doc,function(kk,val){
+                    if(val.trim() != ""){
+                        var old_item_extract = val.split("?");
+                        var item_url = old_item_extract[0];
+
+                        var doc_details = {
+                            "item_url": item_url,
+                            "item_type" : 'DOCUMENT',
+                        };
+                        old_selected_acquiadam_doc.push(doc_details);
+                    }
+                });
+            }    
+        }
+
+        var old_selected_doc = jQuery('textarea[name="product[acquiadam_document]"]').val();
+        
+        if(old_selected_doc.trim() != ""){
+            if(((x)=>{try{JSON.parse(x);return true;}catch(e){return false}})(old_selected_doc))
+            {
+                console.log("valide json");
+            }else{
+
+                old_selected_doc = JSON.stringify(old_selected_acquiadam_doc);
+                console.log("invalide json")
+            }
+            set_selected_images(old_selected_doc);
+        }else{
+            jQuery('.dynamic-rows-doc-acquiadam').find('.tbody_dynamic_doc_acquiadam').html("");
+        }
+    });
+    function set_selected_images(old_selected_images){
+        var selected_images = JSON.parse(old_selected_images);
+        var item_length = selected_images.length;
+        var content = '';
+        jQuery.each(selected_images, function( i, img_data ){
+            var select_item_type = img_data.item_type;
+            var original_item_url = img_data.item_url;
+            var doc_name = img_data.doc_name; 
+            content += '<tr style="background: #efefef;"><td>'
+            content += '<img src ="'+drag_img+'"/></td>'
+            content += '<td><input class="url acquiadam_doc acquiadam_selected_doc_name_'+i+'" type="text"' +
+                    'data-index="' + i + '" data-imgType="' + select_item_type + '"' +
+                    'value="'+doc_name+'" />'
+            content += '</td>'
+            content += '<td><input class="url acquiadam_selected_doc"'+
+                        'type="text" data-index="'+i+'"'+
+                        'id="textboxId_'+i+'"'+
+                        'data-imgType="'+select_item_type+'"'+
+                        'value="'+original_item_url+'" />'
+            content += '</td>'
+            content += '<td><a href="#" class="btnDelete_'+i+'">'+
+                        '<img src ="'+ delete_icon +'" height="25" width="25"/>'+
+                        '</a></td></tr>';
+            jQuery("#sortable").on('click','.btnDelete_'+i,function(){
+                       jQuery(this).closest('tr').remove();
+             });
+            
+        });
+        jQuery('.dynamic-rows-doc-acquiadam').find('.tbody_dynamic_doc_acquiadam').html(content);
+         
+    }
+    jQuery('body').trigger('contentUpdated');
+    require(
+        [
+            'jquery',
+            'Magento_Ui/js/modal/modal',
+            'mage/cookies'
+        ],
+        function ($, modal) {
+            jQuery("#external_document_acquiadam").appendTo(
+                jQuery('.product_form_product_form_acquiadam_doc_modal').find('div .page-actions')
+            );
+            jQuery("div .page-actions #external_document_acquiadam").on("click", function () {
+                var options = {
+                    type: 'popup',
+                    responsive: true,
+                    innerScroll: true,
+                    buttons: [{
+                        text: $.mage.__('Continue'),
+                        class: 'pop-btn',
+                        click: function () {
+                            var url_separator = " \n";
+                            var selected_images = '';
+                            var acquiadam_data = [];
+                            var img_alttext_details = [];
+                            var selected_doc_details = [];
+                            jQuery(".image-checkbox").each(function (index) {
+                                if ($(this).is(":checked")) {
+                                    var selected_media_id = $(this).val();
+                                    var selected_data_id = $(this).attr('data-id');
+                                    var template_url = $(this).attr('data-templateurl');
+                                    var assets_type = $(this).attr('data-assetstype');
+                                    var doc_name = $(this).attr('data-docname');
+                                    $(".image_input_box_" + selected_data_id).each(function () {
+                                        if ($(this).is(":checked")) {
+                                            var selected_img_url = $(this).attr("data-image");
+                                            var selected_altText = $(this).attr("data-altText");
+                                            var selected_image_role = $(this).attr("data-imagerole");
+                                            img_alttext_details.push(selected_altText);
+                                           
+                                            var b_doc_data = {
+                                                "b_item_url" : selected_img_url,
+                                                "b_img_type" : assets_type,
+                                                "b_doc_name" : doc_name
+                                            };
+                                            
+                                            selected_doc_details.push(b_doc_data);
+                                        }
+                                    });
+                                   
+                                }
+                            });
+                            
+                            add_acquiadam_doc_item(selected_doc_details,img_alttext_details);
+                            this.closeModal();
+                        }
+                    }]
+                };
+                var popup = modal(options, $('#popup-modal-acquiadam-Doc'));
+                jQuery("#popup-modal-acquiadam-Doc").modal("openModal");
+                jQuery("#popup-modal-acquiadam-Doc").parents("div.modal-inner-wrap").addClass("customdialogbox");
+                
+                init_model_data(); 
+            });
+            function add_acquiadam_doc_item(data_item) {
+                
+                var old_selected_length = jQuery('.tbody_dynamic_doc_acquiadam tr').length;
+                let item_length = data_item.length;
+                
+                var i = 0;
+                if(old_selected_length > 0){
+                    i = old_selected_length;
+                    item_length = old_selected_length + item_length;
+                }
+                
+                var k = 0;
+                var content = "";
+                for(i;i < item_length; i++)
+                {
+                    
+                    var input_field_val = data_item.shift();
+                    var item_v_url = input_field_val.b_item_url;
+                    var select_item_type = input_field_val.b_img_type;
+                    var s_doc_name = input_field_val.b_doc_name;
+
+                    content = '<tr style="background: #efefef;" data-index="'+i+'"><td>'
+                    content += '<img src ="'+drag_img+'"/></td>'
+                    content += '<td><input class="url acquiadam_selected_doc_name_'+i+'" type="text"' +
+                                'data-index="' + i + '" value="'+s_doc_name+'" /></td>'
+                    content += '<td><input class="url acquiadam_selected_doc"'+
+                                'type="text" data-index="'+i+'"'+
+                                'data-imgType="'+select_item_type+'"'+
+                                'id="textboxId_'+i+'"'+
+                                'value="'+item_v_url+'" /></td>'
+                    content += '<td><a href="#" class="btnDelete_'+i+'">'+
+                                '<img src ="'+delete_icon+'" height="25" width="25"/>'+
+                                '</a></td></tr>';
+                    jQuery("#sortable").on('click','.btnDelete_'+i,function(){
+                           jQuery(this).closest('tr').remove();
+                     });
+                    jQuery('.dynamic-rows-doc-acquiadam').find('.tbody_dynamic_doc_acquiadam').append(content);
+                }
+            }
+            jQuery(".save_doc").on('click',function(){
+                
+                var all_selected_doc = [];
+                jQuery('.acquiadam_selected_doc').each(function(i){
+            
+                    var select_doc = jQuery(this).val();
+                    var item_index = jQuery(this).attr("data-index");
+                    var item_doc_type = jQuery(this).attr("data-imgType");
+                    var doc_name = jQuery('.acquiadam_selected_doc_name_' + item_index).val();
+                    var new_img_val = getAllUrlParams(select_doc).download;
+                    var new_selected_url = select_doc;
+                    if(typeof new_img_val != "undefined"){
+                        new_selected_url = new_selected_url.replace("&download=true", "");
+                    }
+
+                    var doc_details = {
+                        "item_url":new_selected_url,
+                        "item_type" : item_doc_type,
+                        "altText" : "",
+                        "doc_name": doc_name,
+                    };
+                    console.log(doc_details);
+                    all_selected_doc.push(doc_details);
+                });
+                if(all_selected_doc != ''){
+                    var myJsonString = JSON.stringify(all_selected_doc);
+                } else {
+                    var myJsonString = "";
+                }
+                jQuery('textarea[name="product[acquiadam_document]"]').val(myJsonString);
+                //document.cookie = "acquiadam_doc=" + myJsonString + "; path=/;";
+                var doc_coockie_id = 0;
+                try{
+                    doc_coockie_id = Cookies.get('doc_coockie_id');
+                }catch(err){
+                    document.cookie = "doc_coockie_id=" + coockie_id + "; path=/;";
+                }
+                var product_id = '<?= $block->escapeHtml($productId); ?>';
+                $.ajax({
+                    url: add_temp_data,
+                    showLoader: true,
+                    data: {
+                        product_id: product_id,
+                        doc:myJsonString,
+                        doc_coockie_id:doc_coockie_id
+                    },
+                    success: function (res) {
+                    },
+                });
+            })
+            
+            jQuery("#sortable tbody").sortable({
+                cursor: "move",
+                placeholder: "sortable-placeholder",
+                helper: function(e, tr)
+                {
+                    var $originals = tr.children();
+                    var $helper = tr.clone();
+                    $helper.children().each(function(index)
+                    {
+                   
+                    jQuery(this).width($originals.eq(index).width());
+                    });
+                    return $helper;
+                }
+            }).disableSelection();
+        });
+function init_model_data(){
+        preloader.css("height", "100vh");
+        preloader.children().show();    
+        let query = "modalLoadData";
+        jQuery("#getAssetData").val("");
+        jQuery.ajax({
+            type: "POST",
+            url: get_acquiadam_image_url,
+            dataType: "JSON",
+            data: {
+                query: query,
+            },
+            beforeSend: function() {
+                jQuery("#popup-modal-acquiadam-Doc").html($(preloader).html());
+                $(preloader).attr("css","position:relative");
+            },
+            success: function(res) {
+                preloader.css("height", 0);
+                preloader.children().hide();
+                jQuery('#customdialogbox1').css("display", "block");
+                if (res.newDiv != "") {
+                    document.getElementById("popup-modal-acquiadam-Doc").innerHTML = res.newDiv;
+                    flag = 0;
+                } else {
+                    document.getElementById("popup-modal-acquiadam-Doc").innerHTML = res.msg;
+                }
+            },
+        });
+    }
+
+    function getAllUrlParams(url) {
+        var queryString = url ? url.split('?')[1] : window.location.search.slice(1);
+        var obj = {};
+        if (queryString) {
+            queryString = queryString.split('#')[0];
+            var arr = queryString.split('&');
+
+            for (var i = 0; i < arr.length; i++) {
+                var a = arr[i].split('=');
+                var paramName = a[0];
+                var paramValue = typeof (a[1]) === 'undefined' ? true : a[1];
+
+                paramName = paramName.toLowerCase();
+                if (typeof paramValue === 'string') paramValue = paramValue.toLowerCase();
+
+                if (paramName.match(/\[(\d+)?\]$/)) {
+
+                    var key = paramName.replace(/\[(\d+)?\]/, '');
+                    if (!obj[key]) obj[key] = [];
+
+                    if (paramName.match(/\[\d+\]$/)) {
+                        var index = /\[(\d+)\]/.exec(paramName)[1];
+                        obj[key][index] = paramValue;
+                    } else {
+                        obj[key].push(paramValue);
+                    }
+                } else {
+                    if (!obj[paramName]) {
+                        obj[paramName] = paramValue;
+                    } else if (obj[paramName] && typeof obj[paramName] === 'string'){
+                        obj[paramName] = [obj[paramName]];
+                        obj[paramName].push(paramValue);
+                    } else {
+                        obj[paramName].push(paramValue);
+                    }
+                }
+            }
+        }
+        return obj;
+    }
+
+
+function checkboxValue(checkboxPopValue = "",categoryWiseSearch = "",sortingData = "",sorting = "",checkBoxPushValue = "") {
+        innerLoader.css("height", "100vh");
+        innerLoader.children().show();
+        let query = "checkboxValue";
+        let iValueData = document.getElementById("iValue").value;
+        let sortingValue = jQuery("#sortingData").val();
+        let goKey = "";
+        let getAssetData = "";
+        let searchKey = "";
+        let sort = "";
+        let checkBoxVal = new Array();
+        if (
+            document.getElementById("goKey").value != "" &&
+            checkboxPopValue != document.getElementById("goKey").value
+        ) {
+            goKey = document.getElementById("goKey").value;
+            checkBoxVal.push(goKey);
+          
+        } else if (checkBoxPushValue == "goKey") {
+            goKey = document.getElementById("goKey").value;
+            checkBoxVal.push(goKey);
+           
+        } else {
+            
+        }
+        if (
+            document.getElementById("searchKey").value != "" &&
+            checkboxPopValue != document.getElementById("searchKey").value
+        ) {
+            searchKey = document.getElementById("searchKey").value;
+            checkBoxVal.push(searchKey);
+        } else if (checkBoxPushValue == "searchKey") {
+            searchKey = document.getElementById("searchKey").value;
+            checkBoxVal.push(searchKey);
+            
+        }
+        if (
+            (document.getElementById("getAssetData").value != "" &&
+                checkboxPopValue !=
+                document.getElementById("getAssetData").value) ||
+            categoryWiseSearch != ""
+        ) {
+            if (
+                categoryWiseSearch != "" &&
+                document.getElementById("getAssetData").value == ""
+            ) {
+                getAssetData = categoryWiseSearch;
+                jQuery("#getAssetData").val(getAssetData);
+                checkBoxVal.push(categoryWiseSearch);
+                
+            } else if (checkBoxPushValue == "getAssetData") {
+                getAssetData = document.getElementById("getAssetData").value;
+                checkBoxVal.push(getAssetData);
+            
+            } else {
+                getAssetData = document.getElementById("getAssetData").value;
+                checkBoxVal.push(getAssetData);
+                
+            }
+        }
+        if (checkBoxPushValue == "") {
+            for (i = 0; i <= iValueData; i++) {
+                if (jQuery("#cb" + i).is(":checked")) {
+                    let checkBoxVal1 = document.getElementById("cb" + i).value;
+                    if (checkBoxVal1 != "") checkBoxVal.push(checkBoxVal1);
+                    
+                }
+            }
+        }
+        if (checkboxPopValue != "") {
+            checkBoxVal = checkBoxVal.filter((e) => e !== checkboxPopValue);
+            if (checkboxPopValue == document.getElementById("getAssetData").value) {
+                jQuery("#getAssetData").val("");
+              
+            }
+            if (checkboxPopValue == document.getElementById("searchKey").value) {
+                jQuery("#searchKey").val("");
+                
+            }
+            if (checkboxPopValue == document.getElementById("goKey").value) {
+                jQuery("#goKey").val("");
+              
+            }
+        }
+        if (sortingData) {
+            sort = sorting + sortingData;
+            
+        } else {
+            sort = sorting + sortingValue;
+            
+        }
+        jQuery.ajax({
+            type: "POST",
+            url: get_acquiadam_image_url,
+            dataType: "JSON",
+            data: {
+                query: query,
+                goKey: goKey,
+                getAssetData: getAssetData,
+                searchKey: searchKey,
+                checkBoxVal: JSON.stringify(checkBoxVal),
+                sortingData: sort,
+            },
+            success: function(res) {
+                innerLoader.css("height", 0);
+                innerLoader.children().hide();
+                if (res.newDiv != "") {
+                    document.getElementById("modal-body").innerHTML = res.newDiv;
+                    flag = 0;
+                    if (sortingData) $("#sortingData").val(sortingData);
+                    if (sortingValue != "") $("#sortingData").val(sortingValue);
+                    if (sorting != "") {
+                        
+                        jQuery("#descending").hide();
+                        jQuery("#ascending").show();
+                    } else {
+                        
+                        jQuery("#descending").show();
+                        jQuery("#ascending").hide();
+                    }
+                } else {
+                    document.getElementById("imgData").innerHTML = res.msg;
+                }
+            },
+        });
+    }
+
+    function removeCheckboxSearch(kValue) {
+        crossValue = document.getElementById(
+            "removeCheckboxSearch" + kValue
+        ).innerHTML;
+        checkboxValue(crossValue);
+    }
+    
+    function categoryWiseSearch(categoryName) {
+        innerLoader.css("height", "100vh");
+        innerLoader.children().show();
+        let categoryWiseSearch = categoryName;
+        checkboxValue("", categoryWiseSearch);
+    }
+
+    document.addEventListener(
+        "scroll",
+        function() {
+            var get_acquiadam_image_url = '<?= $block->escapeUrl($block->getBaseUrl()."acquiadam/index/initAcquiaDamPopup") ?>';
+            if (
+                jQuery("#image-list").scrollTop() + jQuery("#image-list").height() >=
+                jQuery("#imgData").height() &&
+                flag == 0
+            ) {
+                flag = 1;
+                innerLoader.css("height", "100vh");
+                innerLoader.children().show();
+                let sortingValue = jQuery("#sortingData").val();
+                let query = "loadMoreBtn";
+                let scrollId = document.getElementById("scrollId").value;
+                let jValueData = document.getElementById("jValue").value;
+                var selected_all_value = jQuery(".all-select").attr("data-selected");
+                jQuery.ajax({
+                    type: "POST",
+                    url: get_acquiadam_image_url,
+                    dataType: "JSON",
+                    data: {
+                        scrollId: scrollId,
+                        query: query,
+                        jValueData: jValueData,
+                        selectAllValue : selected_all_value
+                    },
+                    success: function(res) {
+                        innerLoader.css("height", 0);
+                        innerLoader.children().hide();
+                        if (res.newDiv == "") {
+                            jQuery("#jValue").val(res.j);
+                            if (sortingValue != ""){
+                                jQuery("#sortingData").val(sortingValue);
+                            }
+                        } else {
+                            jQuery("#imgData").append(res.newDiv);
+                            jQuery("#jValue").val(res.j);
+                            flag = 0;
+                        }
+                    },
+                });
+            }
+        },
+        true
+    );
+
+
+    jQuery(document).on("click", "#clearAll", function() {
+        init_model_data();
+    });
+
+    jQuery(document).on("change", "#getAssetData", function() {
+        innerLoader.css("height", "100vh");
+        innerLoader.children().show();
+        checkboxValue("", "", "", "", "getAssetData");
+    });
+
+    jQuery(document).on("click", "#searchBtn", function() {
+        innerLoader.css("height", "100vh");
+        innerLoader.children().show();
+        checkboxValue("", "", "", "", "searchBtn");
+    });
+
+    jQuery(document).on("change", "#sortingData", function() {
+        let sortingData = document.getElementById("sortingData").value;
+        
+        checkboxValue("", "", sortingData);
+    });
+
+    jQuery(document).on("click", "#ascending", function() {
+        let sortingData = document.getElementById("sortingData").value;
+     
+        checkboxValue("", "", sortingData, "");
+        jQuery("#descending").show();
+        jQuery("#ascending").hide();
+    });
+
+    jQuery(document).on("click", "#descending", function() {
+        let sortingData = document.getElementById("sortingData").value;
+       
+        checkboxValue("", "", sortingData, "-");
+        jQuery("#descending").hide();
+        jQuery("#ascending").show();
+    });
+
+    this.isOpen = false;
+
+    jQuery(document).ready(function() {
+        jQuery("body").click(function() {
+            if (jQuery(".dropdown-list").hasClass("is-active")) {
+                jQuery(".dropdown-list").removeClass("is-active");
+                jQuery(".dropdown-list").hide();
+                this.isOpen = false;
+            } else {}
+        });
+
+        jQuery("#imgData").addClass("column-4");
+        jQuery(document).on("click", "#columnData", function() {
+                var column_value = jQuery(this).val();
+                if (column_value == "") {
+                    jQuery("#imgData").removeClass();
+                    jQuery("#imgData").addClass("row");
+                    jQuery("#imgData").addClass("column-4");
+                } else {
+                    jQuery("#imgData").removeClass();
+                    jQuery("#imgData").addClass("row");
+                    jQuery("#imgData").addClass("column-" + column_value);
+                }
+            });
+
+            jQuery(document).on("change", ".dropdown-list li label", function() {
+                jQuery(this).closest('.dropdown-list').addClass('is-active');
+                jQuery(this).closest('.dropdown-list').show();
+            });
+
+            jQuery(document).on('keydown', function(e) {
+                if (e.keyCode == 27){
+                    jQuery('.modal-popup').show();
+                }
+            });
+    });
+
+    jQuery(document).on("click", "div.dropdown", function() {
+        if (!this.isOpen) {
+            this.isOpen = true;
+            jQuery(this).find(".dropdown-list").show();
+            jQuery(this).find(".dropdown-list").addClass("is-active");
+        } else {
+            this.isOpen = false;
+            jQuery(this).find(".dropdown-list").hide();
+            jQuery(this).find(".dropdown-list").removeClass("is-active");
+        }
+    });
+
+    jQuery(document).keypress(function(event) {
+        if (event.which == "13") {
+            event.preventDefault();
+            if (document.getElementById("searchKey").value != "") {
+                innerLoader.css("height", "100vh");
+                innerLoader.children().show();
+                checkboxValue();
+            } else if (document.getElementById("goKey").value != "") {
+                innerLoader.css("height", "100vh");
+                innerLoader.children().show();
+                let goKey = document.getElementById("goKey").value;
+                checkboxValue("", "", "", "", goKey);
+            } else {
+                checkboxValue();
+            }
+        }
+    });
+
+    jQuery(document).on("click", "#goBtn", function() {
+        innerLoader.css("height", "100vh");
+        innerLoader.children().show();
+        checkboxValue("", "", "", "", "goBtn");
+    });
+</script>
+<script>
+    jQuery('body').trigger('contentUpdated');
+</script>

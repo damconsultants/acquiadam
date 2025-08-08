@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <type name="Magento\Framework\View\Element\UiComponent\DataProvider\CollectionFactory">
+        <arguments>
+            <argument name="collections" xsi:type="array">
+                <item name="acquiadam_index_listing_data_source" xsi:type="string">DamConsultants\AcquiaDam\Model\ResourceModel\Collection\Grid\AcquiaDamSycDataCollection</item>
+                <item name="acquiadam_index_sync_data_source" xsi:type="string">DamConsultants\AcquiaDam\Model\ResourceModel\Collection\Grid\AcquiaDamConfigSyncDataCollection</item>
+                <item name="acquiadam_index_replace_data_source" xsi:type="string">DamConsultants\AcquiaDam\Model\ResourceModel\Collection\Grid\AcquiaDamAutoReplaceDataCollection</item>
+            </argument>
+        </arguments>
+    </type>
+    <virtualType name="DamConsultants\AcquiaDam\Model\ResourceModel\Collection\Grid\AcquiaDamSycDataCollection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">widen_cron_data</argument>
+            <argument name="resourceModel" xsi:type="string">DamConsultants\AcquiaDam\Model\ResourceModel\AcquiaDamSycData</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="DamConsultants\AcquiaDam\Model\ResourceModel\Collection\Grid\AcquiaDamConfigSyncDataCollection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">widen_config_sync_data</argument>
+            <argument name="resourceModel" xsi:type="string">DamConsultants\AcquiaDam\Model\ResourceModel\AcquiaDamConfigSyncData</argument>
+        </arguments>
+    </virtualType>
+    <virtualType name="DamConsultants\AcquiaDam\Model\ResourceModel\Collection\Grid\AcquiaDamAutoReplaceDataCollection" type="Magento\Framework\View\Element\UiComponent\DataProvider\SearchResult">
+        <arguments>
+            <argument name="mainTable" xsi:type="string">widen_cron_replace_data</argument>
+            <argument name="resourceModel" xsi:type="string">DamConsultants\AcquiaDam\Model\ResourceModel\AcquiaDamAutoReplaceData</argument>
+        </arguments>
+    </virtualType>
+</config>

@@ -1,0 +1,148 @@
+<?php
+namespace DamConsultants\AcquiaDam\Controller\Adminhtml\Product;
+
+class AddData extends \Magento\Backend\App\Action
+{
+    /**
+     * @var string $_pageFactory;
+     */
+    protected $_pageFactory;
+    /**
+     * @var string $_product;
+     */
+    protected $_product;
+    /**
+     * @var string $file;
+     */
+    protected $file;
+    /**
+     * @var string $resultJsonFactory;
+     */
+    protected $resultJsonFactory;
+    /**
+     * @var string $driverFile;
+     */
+    protected $driverFile;
+    /**
+     * @var string $storeManagerInterface;
+     */
+    protected $storeManagerInterface;
+    /**
+     * @var string $cookieManager;
+     */
+    protected $cookieManager;
+    /**
+     * @var string $productActionObject;
+     */
+    protected $productActionObject;
+    /**
+     * @var string $_registry;
+     */
+    protected $_registry;
+    /**
+     * @var string $_resource;
+     */
+    protected $_resource;
+    /**
+     * @var string $cookieMetadataFactory;
+     */
+    protected $cookieMetadataFactory;
+
+    /**
+     * Add Data.
+     *
+     * @param \Magento\Backend\App\Action\Context $context
+     * @param \Magento\Framework\View\Result\PageFactory $pageFactory
+     * @param \Magento\Catalog\Model\Product $product
+     * @param \Magento\Framework\Filesystem\Io\File $file
+     * @param \Magento\Framework\Filesystem\Driver\File $driverFile
+     * @param \Magento\Framework\Controller\Result\JsonFactory $jsonFactory
+     * @param \Magento\Catalog\Model\Product\Action $productActionObject
+     * @param \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager
+     * @param \Magento\Store\Model\StoreManagerInterface $storeManagerInterface
+     * @param \Magento\Framework\Registry $registry
+     * @param \Magento\Framework\App\ResourceConnection $resource
+     * @param \Magento\Framework\Stdlib\Cookie\CookieMetadataFactory $cookieMetadataFactory
+     */
+    public function __construct(
+        \Magento\Backend\App\Action\Context $context,
+        \Magento\Framework\View\Result\PageFactory $pageFactory,
+        \Magento\Catalog\Model\Product $product,
+        \Magento\Framework\Filesystem\Io\File $file,
+        \Magento\Framework\Filesystem\Driver\File $driverFile,
+        \Magento\Framework\Controller\Result\JsonFactory $jsonFactory,
+        \Magento\Catalog\Model\Product\Action $productActionObject,
+        \Magento\Framework\Stdlib\CookieManagerInterface $cookieManager,
+        \Magento\Store\Model\StoreManagerInterface $storeManagerInterface,
+        \Magento\Framework\Registry $registry,
+        \Magento\Framework\App\ResourceConnection $resource,
+        \Magento\Framework\Stdlib\Cookie\CookieMetadataFactory $cookieMetadataFactory
+    ) {
+        $this->_pageFactory = $pageFactory;
+        $this->_product = $product;
+        $this->file = $file;
+        $this->resultJsonFactory = $jsonFactory;
+        $this->driverFile = $driverFile;
+        $this->storeManagerInterface = $storeManagerInterface;
+        $this->cookieManager = $cookieManager;
+        $this->productActionObject = $productActionObject;
+        $this->_registry = $registry;
+        $this->_resource = $resource;
+        $this->cookieMetadataFactory = $cookieMetadataFactory;
+        return parent::__construct($context);
+    }
+    /**
+     * Execute
+     *
+     * @return $this
+     */
+    public function execute()
+    {
+        $connection = $this->_resource->getConnection();
+        $table_name = $connection->getTableName('widen_temp_data');
+        $product_id = $this->getRequest()->getParam('product_id');
+        $coockie_id = $this->getRequest()->getParam('image_coockie_id');
+        $acquiadam_image = $this->getRequest()->getParam('image');
+        if ($coockie_id == 0) {
+            $data = [
+                "value" => $acquiadam_image,
+                "product_id" => $product_id
+            ];
+            $connection->insert($table_name, $data);
+            $lastAddedId = $connection->lastInsertId($table_name);
+        } else {
+            $select = $connection->select()
+            ->from(
+                ['c' => $table_name],
+                ['*']
+            )
+            ->where("c.product_id = ?", $product_id);
+            $records = $connection->fetchAll($select);
+            if (empty($records)) {
+                $data = [
+                    "value" => $acquiadam_image,
+                    "product_id" => $product_id
+                ];
+                $connection->insert($table_name, $data);
+                $lastAddedId = $connection->lastInsertId($table_name);
+            } else {
+                $new_data = [
+                    "value" => $acquiadam_image,
+                    "product_id" => $product_id
+                ];
+                $where = ["id = ?" => $coockie_id];
+                $connection->update($table_name, $new_data, $where);
+                $lastAddedId = $coockie_id;
+            }
+        }
+        $publicCookieMetadata = $this->cookieMetadataFactory->createPublicCookieMetadata();
+        $publicCookieMetadata->setDurationOneYear();
+        $publicCookieMetadata->setPath('/');
+        $publicCookieMetadata->setHttpOnly(false);
+        $this->cookieManager->setPublicCookie(
+            'image_coockie_id',
+            $lastAddedId,
+            $publicCookieMetadata
+        );
+    }
+}

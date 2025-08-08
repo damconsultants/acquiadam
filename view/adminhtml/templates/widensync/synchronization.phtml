@@ -1,0 +1,177 @@
+<section class="container" center>
+      <header><h2>Synchronization Acquia DAM Data to Magento</h2></header>
+      <div class="form">
+        <div class="input-box attribute">
+          <label>Select Attribute:-</label>
+          <div class="column">
+            <div class="select-box">
+              <select class="select2-container select_attribute" data-select2-id="select2-data-acquiadam_property" id="select_attribute" name="select_attribute">
+                <?php foreach($block->toOptionArray() as $attribute) : ?>
+                    <option value="<?= $attribute['value'] ?>"><?= $attribute['label'] ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="input-box limit">
+          <label>Enter Your Sku Limit:-</label>
+          <input type="text" placeholder="Enter Your Sku Limit" id="skulimit" class="skulimit" />
+        </div>
+        <div class="option-box">
+          <div class="all-option">
+            <div class="option">
+              <input type="checkbox" id="check-male get_sku" name="option" class="get_sku" />
+              <label for="check-male">Get All Sku</label>
+            </div>
+            <div class="option">
+              <input type="checkbox" id="check-female cdn" name="option" class="cdn" />
+              <label for="check-female">Acquia DAM CDN</label>
+            </div>
+            <div class="option">
+              <input type="checkbox" id="check-other import" name="option" class="import"/>
+              <label for="check-other">Magento Import</label>
+            </div>
+          </div>
+        </div>
+        <div class="input-box">
+            <label>Product Sku:-</label>
+            <textarea id="productsku" class="productsku" name="productsku" rows="10" cols="200"></textarea> 
+        </div>
+        <button class="action- scalable primary get_sku_data" id="get_sku_data">
+        <span>
+            <?= $block->escapeHtml('Get Sku Data');?>
+        </span>
+        </button>
+        <button class="action- scalable primary sync_sku" id="sync_sku">
+            <span>
+                <?= $block->escapeHtml('Sync Sku Data');?>
+            </span>
+        </button>
+        <div class="success-msg-sync" style="display:none;"></div>
+        <div class="error-msg-sync" style="display:none;"></div>
+      </div>
+    </section>
+<script>
+    require([
+        'jquery',
+        'prototype'
+    ], function ($) {
+        var checkbox_checked = 0;
+        var sku_limit = 0;
+        $('.get_sku').change(function () {
+            if ($(this).is(':checked')) {
+                $(".limit").hide();
+                checkbox_checked = 1;
+            } else {
+                $(".limit").show();
+                checkbox_checked = 0;
+            }
+        });
+        $('.get_sku_data').click(function () {
+            var product_sku = $('.productsku').val();
+            var select_attribute = $('.select_attribute').val();
+            
+            if (checkbox_checked == 0) {
+                sku_limit = $('.skulimit').val();
+            } else {
+                sku_limit = 0;
+            }
+
+            var params = {
+                product_sku: product_sku,
+                select_attribute: select_attribute,
+                sku_limit: sku_limit
+            };
+            new Ajax.Request('<?= $block->escapeUrl($block->getAjaxUrl()); ?>', {
+                parameters: params,
+                loaderArea: true,
+                asynchronous: true,
+                beforeSend: function () {
+                    $('body').trigger('processStart');
+                },
+                onSuccess: function (transport) {
+                    var response = JSON.parse(transport.responseText);
+
+                    var resultText = '';
+                    if (response.status == 1) {
+                        resultText = response.message
+                        console.log(response.message);
+                        $('.productsku').val(resultText);
+                        $(".success-msg-sync").show();
+                        $(".error-msg-sync").hide();
+                        $(".success-msg-sync").html("Sku Get Successfully...!");
+                        setTimeout(function () { 
+                            
+                            $('.success-msg-sync').delay(5000).fadeOut('slow');
+                        }, 5000);
+                    } else {
+                        resultText = transport.statusText;
+                        $('.productsku').text('');
+                        $(".success-msg-sync").hide();
+                        $(".error-msg-sync").show();
+                        $(".error-msg-sync").html("There is not any empty AcquiaDam Data in product.");
+                        setTimeout(function () { 
+                            $('.error-msg-sync').delay(5000).fadeOut('slow');
+                        }, 5000);
+                    }
+
+                }
+            });
+        });
+
+        $('.sync_sku').click(function () {
+            var product_sku = $('.productsku').val();
+            var select_attribute = $('.select_attribute').val();
+
+            var is_acquiadam_cdn = 0;
+            var is_magento_imp = 0;
+
+            if ($('.cdn').is(":checked")){
+                is_acquiadam_cdn = 1;
+            }
+            
+            if ($('.import').is(":checked")){
+                is_magento_imp = 1;
+            }
+            
+            var params = {
+                product_sku: product_sku,
+                select_attribute: select_attribute,
+                is_magento_import: is_magento_imp,
+                is_acquiadam_cdn    : is_acquiadam_cdn
+            };
+            new Ajax.Request('<?= $block->escapeUrl($block->getSyncAjaxUrl()); ?>', {
+                parameters: params,
+                loaderArea: true,
+                asynchronous: true,
+                beforeSend: function () {
+                    $('body').trigger('processStart');
+                },
+                onSuccess: function (transport) {
+                    var resultText = '';
+                    if (transport.responseJSON.status == 1) {
+                        resultText = transport.statusText;
+                        $('.productsku').text('');
+                        $(".success-msg-sync").show();
+                        $(".error-msg-sync").hide();
+                        $(".success-msg-sync").html(transport.responseJSON.message);
+                        setTimeout(function () { 
+                            $('.success-msg-sync').delay(5000).fadeOut('slow');
+                        }, 5000);
+                    } else {
+                        /*console.log(transport.responseJSON.message);*/
+                        resultText = transport.responseJSON.message
+                        $('.productsku').text('');
+                        $(".error-msg-sync").show();
+                        $(".success-msg-sync").hide();
+                        $(".error-msg-sync").html(resultText);
+                        setTimeout(function () { 
+                            $('.error-msg-sync').delay(5000).fadeOut('slow');
+                        }, 5000);
+                    }
+                }
+            });
+        });
+    });
+</script>
+

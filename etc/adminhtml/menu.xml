@@ -1,0 +1,73 @@
+<?xml version="1.0"?>
+
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Backend:etc/menu.xsd">  
+   <menu>
+       <add id="DamConsultants_AcquiaDam::menu"
+           title="Acquia DAM" module="DamConsultants_AcquiaDam"
+           sortOrder="10"
+           resource="Magento_Backend::content"
+           />
+         <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item5"
+           title="MetaProperty" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu"
+           resource="DamConsultants_AcquiaDam::menu_item5"
+           />
+       <!-- END:   new node -->
+        <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item1"
+           title="Acquia DAM MetaProperty " module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu_item5"
+           action="acquiadam/index/acquiadammetaproperty"
+           resource="DamConsultants_AcquiaDam::menu_item1"
+           />
+       <!-- END:   new node -->
+          <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item6"
+           title="Action Log" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu"
+           resource="DamConsultants_AcquiaDam::menu_item6"
+           />
+       <!-- END:   new node -->
+           <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item"
+           title="Cron Action Log" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu_item6"
+           action="acquiadam/index/acquiadamgrid"
+           resource="DamConsultants_AcquiaDam::menu_item"
+           />
+       <!-- END:   new node -->
+        <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item7"
+           title="Replace Cron Action Log" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu_item6"
+           action="acquiadam/index/replacecrongrid"
+           resource="DamConsultants_AcquiaDam::menu_item7"
+           />
+       <!-- END:   new node -->
+       <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item3"
+           title="Synchronization Log" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu_item6"
+           action="acquiadam/index/sync"
+           resource="DamConsultants_AcquiaDam::menu_item3"
+           />
+       <!-- END:   new node -->
+       <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item2"
+           title="Synchronization" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu"
+           resource="DamConsultants_AcquiaDam::menu_item2"
+           />
+       <!-- END:   new node -->
+       <!-- START: new node -->
+       <add id="DamConsultants_AcquiaDam::menu_item4"
+           title="Synchronization Data" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu_item2"
+           action="acquiadam/index/synchronization"
+           resource="DamConsultants_AcquiaDam::menu_item4"
+           />
+       <!-- END:   new node -->
+      
+   </menu>
+</config> 

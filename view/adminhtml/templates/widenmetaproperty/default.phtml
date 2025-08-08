@@ -1,0 +1,142 @@
+<?php
+$block_data = $block->getMetaData();
+$get_metaData = $block_data['metadata'];
+$default_sku_value = $block_data['sku_selected'];
+$default_image_role_value = $block_data['image_role_selected'];
+$default_image_alt_text = $block_data['image_alt_text'];
+$default_color = $block_data['image_color'];
+$url = $block->getMainUrl();
+$syncMetaUrl = $url."acquiadam/index/synmetaproperty";
+
+$sku_properites = "";
+$image_role_properites = "";
+$alt_properites = "";
+$color_properites = "";
+if (count($get_metaData) > 0) {
+    foreach ($get_metaData as $newKey => $newValue) {
+        $sku_checked = "";
+        $image_role_checked = "";
+        $alt_checked = "";
+		$color_checked = "";
+        if ($default_sku_value == $newKey) {
+            $sku_checked = "selected";
+        } elseif ($default_image_role_value == $newKey) {
+            $image_role_checked = "selected";
+        } elseif ($default_image_alt_text == $newKey) {
+            $alt_checked = "selected";
+        } elseif ($default_color == $newKey) {
+            $color_checked = "selected";
+        } 
+        $sku_properites .= '<option value="' . $newKey . '" ' . $sku_checked . ' >' .
+                        $block->escapeHtml($newValue) .
+                        '</option>';
+		$color_properites .= '<option value="' . $newKey . '" ' . $color_checked . ' >' .
+                        $block->escapeHtml($newValue) .
+                        '</option>';
+        $image_role_properites .= '<option value="' . $newKey . '" ' . $image_role_checked . ' >' .
+                        $block->escapeHtml($newValue) .
+                        '</option>';
+        $alt_properites .= '<option value="' . $newKey . '" ' . $alt_checked . ' >' .
+                            $newValue .
+                            '</option>';
+    }
+}
+?>
+<button type="submit" class="action- scalable primary syncMetaProperties" 
+        name="submit" id="btn_submit sync-metaproperties" 
+        style="margin-top: 30px; border-radius: 4px; width: 247px;  margin-left: auto; display: block;">
+    <span>
+        <?= $block->escapeHtml('Sync Metaproperties');?>
+    </span>
+</button>
+
+<form name="metaproperty" action="<?=$block->escapeUrl($block->getSubmitUrl());?>" method="post"
+    enctype="multipart/form-data">
+    <?= $block->getBlockHtml('formkey'); ?>
+    <div class="main_container dear-stock-sec">
+        <div class="main_header_master admin__data-grid-wrap">
+            <div class="main_container_masterdata admin__data-grid-wrap product-imp-sec">
+            <div class="product-imp-list">
+                <h4 class="product-imp-label"> The Meta Property Configration For the Style Number:-</h4>
+                <div class="form-check form-check-inline">
+                        <input type="hidden" name="system_slug[]" value="sku" />
+                        <p class="form-check-label">Property List:- </p>
+                        <select class="selectbox_item" id="acquiadam_property" name="select_meta_tag[]">
+                            <option value="0">Select The option</option>
+                            <?= $sku_properites; ?>
+                        </select>
+
+                </div>
+            </div>
+			
+			<div class="product-imp-list">
+                <h4 class="product-imp-label"> The Meta Property Configration For the Color Number:-</h4>
+                <div class="form-check form-check-inline">
+                        <input type="hidden" name="system_slug[]" value="color" />
+                        <p class="form-check-label">Property List:- </p>
+                        <select class="selectbox_item" id="acquiadam_property_color" name="select_meta_tag[]">
+                            <option value="0">Select The option</option>
+                            <?= $color_properites; ?>
+                        </select>
+
+                </div>
+            </div>
+
+            <div class="product-imp-list">
+                    <h4 class="product-imp-label"> The Meta Property Configration For the Image Role :-</h4>
+                        <div class="form-check form-check-inline">
+                                <p class="form-check-label"> Property List:- </p>
+                                <input type="hidden" name="system_slug[]" value="image_role" />
+                                <select class="selectbox_item" id="acquiadam_property_image_role" name="select_meta_tag[]">
+                                    <option value="0">Select The option</option>
+                                    <?= $image_role_properites; ?>
+                                </select>
+                        </div>
+            </div>
+
+
+            <div class="product-imp-list">
+                <h4 class="product-imp-label">The Meta Property Configration For the Alt Text :-</h4>
+                <div class="form-check form-check-inline">
+                        <p class="form-check-label"> Property List:- </p>
+                        <input type="hidden" name="system_slug[]" value="alt_text" />
+                        <select class="selectbox_item" id="acquiadam_property_alt_tax" name="select_meta_tag[]">
+                            <option value="0">Select The option</option>
+                            <?= $alt_properites; ?>
+                        </select>
+                </div>
+                <button type="submit" class="action- scalable primary" name="submit" id="btn_submit">
+                    <span>
+                        <?= $block->escapeHtml('Save Meta Property');?>
+                    </span>
+                </button>
+            </div>
+
+            </div>
+        </div>
+    </div>
+
+</form>
+
+<script>
+    require(["jquery"],function($) {
+        $(document).ready(function() {
+            $('.syncMetaProperties').click(function () {
+                var customurl = '<?= $block->escapeHtml($syncMetaUrl); ?>';
+                    $.ajax({
+                        url: customurl,
+                        type: 'POST',
+                        showLoader: true,
+                        dataType: 'json',
+                        loaderArea: true,
+                    complete: function(response) {                     
+                        location.reload(true);
+                    },
+                    error: function (xhr, status, errorThrown) {
+                        alert('Error happens. Try again.');                            
+                    }
+                });
+            });
+       });
+    });
+</script>

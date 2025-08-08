@@ -1,0 +1,860 @@
+<?php
+$currentProduct = "current_product";
+$MagentoImageRoll = $block->getBulkImageRoll();
+$product = $block->getProduct($currentProduct);
+$productId = $product->getId();
+$sku = $product->getSku();
+$widen_image = $product->getWidenMultiImg();
+$admin = $block->getBackendArea();
+$mediaUrl = $block->getMediaUrl();
+$attr = [];
+$attributes = [];
+foreach ($MagentoImageRoll as $attribute) {
+    $height = $block->getHeightWidht($productId, $attribute->getAttributeCode())->getHeight();
+    $width = $block->getHeightWidht($productId, $attribute->getAttributeCode())->getWidth();
+    $attr[] = [
+        'code' => $attribute->getAttributeCode(),
+        'label' => $attribute->getFrontendLabel(),
+        'height' => $height,
+        'width' => $width
+    ];
+}
+?>
+<div class="preloader" id="preloader" style="height:0px">
+    <img class="animation__shake"
+        src="<?= $block->escapeHtml($block->getPreloader()); ?>"
+        alt="acquiadamLoader" height="400" width="400" style="display:none;">
+</div>
+<div class="success-msg-sync" style="padding: 5px;display:none;"></div>
+<div class="error-msg-sync" style="display:none;"></div>
+<div class="row">
+    <div class="add-video-button-container">
+        <button type="button" name="external_image_acquiadam"
+        id="external_image_acquiadam">Acquia DAM Image</button>
+        <button type="button" name="import_image_acquiadam"
+        id="import_image_acquiadam" class="action-secondary"
+        style="float:left;">Import Image</button>
+    </div>
+</div>
+<table class="dynamic-rows-acquiadam" id="sortable-acquiadam">
+    <thead>
+        <tr style="background: #efefef;">
+            <th>
+            </th>
+            <th>
+                <span>Acquia DAM CND URL</span>
+            </th>
+            <th>
+                <span>Alt text</span>
+            </th>
+            <th>
+                <span>Image Role</span>
+            </th>
+            <th>
+                <span>Image Url</span>
+            </th>
+            <th>
+                <span>Height</span>
+            </th>
+            <th>
+                <span>Width</span>
+            </th>
+            <th>
+                <span>Action</span>
+            </th>
+        </tr>
+    </thead>
+    <tbody class="tbody_dynamic-acquiadam"></tbody>
+</table>
+
+<div id="popup-modal-acquiadam" style="display:none;">
+    <div id="AcquiaDamContainerView"></div>
+</div>
+
+<script>
+    var attr = <?= /* @noEscape */$block->getJson($attr); ?>;
+    var drag_img = "<?= $block->escapeHtml($block->getDrag()); ?>";
+    var delete_icon = "<?= $block->escapeHtml($block->getDelete()); ?>";
+    var get_widen_image_url = '<?= $block->escapeUrl($block->getBaseUrl()."acquiadam/index/initacquiadampopup") ?>';
+    var import_image_url = '<?= $block->escapeUrl($block->getBaseUrl().$admin."/acquiadam/product/importimage") ?>'
+    var add_temp_data = '<?= $block->escapeUrl($block->getBaseUrl().$admin."/acquiadam/product/adddata") ?>'
+    var cb = 0;  
+    var vocabulary = null;
+    var preloader = jQuery(".preloader");
+    var innerLoader = jQuery("#innerLoader");
+    var docInnerLoader = jQuery("#docInnerLoader");
+    var flag = 0;
+    var selectAllValue = "";
+   
+    
+    jQuery(document).on('click', '.widen_url button', function () {
+        var old_selected_widen_images = [];
+        var old_selected_images = jQuery('textarea[name="product[widen_multi_img]"]').val();
+        if (old_selected_images.trim() != "") {
+            set_selected_images(old_selected_images);
+        } else {
+            jQuery('.dynamic-rows-acquiadam').find('.tbody_dynamic-acquiadam').html("");
+        }
+    });
+
+    jQuery(document).on("click", ".all-select", function () {
+        selectAllValue = jQuery(this).attr("data-selected");
+        if (selectAllValue == "true") {
+            jQuery(this).html("All Select");  
+            jQuery(this).attr("data-selected","false");
+            let jValueData = document.getElementById("jValue").value - 1;
+            for (let j = 0; j <= jValueData; j++) {
+                document.getElementById("imagecheck" + j).checked = false;
+            }
+        } else {
+            jQuery(this).html("Deselect All");  
+            jQuery(this).attr("data-selected","true");
+            let jValueData = document.getElementById("jValue").value - 1;
+            for (let j = 0; j <= jValueData; j++) {
+                document.getElementById("imagecheck" + j).checked = true;
+            }
+        }
+    });
+    
+    function set_selected_images(old_selected_images) {
+        var selected_images = JSON.parse(old_selected_images);
+        var item_length = selected_images.length;
+        var content = '';
+        jQuery.each(selected_images, function (i, img_data) {
+            console.log(img_data);
+            var selected_role = img_data.image_role;
+            var select_item_type = img_data.item_type;
+            var old_img_altText = img_data.altText;
+
+            var check_is_imported = img_data.is_import;
+
+            var selected_old_template_url = img_data.selected_template_url;
+            var selected_height = img_data.height;
+            if(typeof selected_height == "undefined"){
+                selected_height = "";
+            }
+
+            var selected_width = img_data.width;
+            if(typeof selected_width == "undefined"){
+                selected_width = "";
+            }
+
+            if(typeof old_img_altText == "undefined"){
+                old_img_altText = "";
+            }
+            var item_thum_url = img_data.thum_url;
+            var original_item_url = img_data.item_url;
+            content += '<tr style="background: #efefef;"><td>'
+            content += '<img src ="' + drag_img + '"/></td>'
+            content += '<td><input class="url widen_selected_images" type="text"' +
+                'data-selectedTemplateUrl="'+ selected_old_template_url +'"' +
+                'data-isimport="'+check_is_imported+'"' +
+                'data-index="' + i + '" id="textboxId_' + i + '" data-imgType="' + select_item_type + '"' +
+                'data-thumUrl="' + item_thum_url + '" value="' + original_item_url + '" />'
+            content += '</td>'
+            if(select_item_type == "image") {
+                content += '<td><input class="url widen_selected_images_alttext" type="text"' +
+                'data-index="' + i + '" id="alttext_' + i + '" data-imgType="' + select_item_type + '"' +
+                'value="' + old_img_altText + '" />'
+                content += '</td>'
+            }else{
+                        content += '<td></td>'
+            }
+                content += '<td>'
+                if(select_item_type == "image"){
+                    content += '<select name="image_rol"  size="5" class="image_role_' + i + '" multiple>';
+                    jQuery.each(attr, function (k, attr_val) {
+                        var selected = "";
+                        if (jQuery.inArray(attr_val.code, selected_role) > -1) {
+                            selected = 'selected';
+                        }
+                        content += '<option value="' + attr_val.code + '" ' + selected + '>' +
+                                    attr_val.label +
+                                    '</option>';
+                    });
+                    content += '</select></td>'
+                    content += '<td><img src ="' + original_item_url + '"'+
+                                'id="image_' + i + '" height="100" width="100" /></td>'
+                    content += '<td><input class="url widen_height widen_selected_images_height_'+i+'" type="text"' +
+                        'data-index="' + i + '" data-imgType="' + select_item_type + '"' +
+                        'value="'+selected_height+'" />'
+                    content += '<td><input class="url widen_width widen_selected_images_width_'+i+'" type="text"' +
+                        'data-index="' + i + '" data-imgType="' + select_item_type + '"' +
+                        'value="'+selected_width+'" />'
+                    }else{
+                        content += '<td><video width="100" height="100" controls>'+
+                                    '<source src="'+ original_item_url +'" type="video/mp4" id="video_'+i+'">'+
+                                    '</video></td>'
+
+                        content += '<td><input style="display:none"'+
+                                'class="url widen_height widen_selected_images_height_'+i+'" type="text"' +
+                                'data-index="' + i + '" data-imgType="' + select_item_type + '"' +
+                                'value="" />'
+                        content += '<td><input style="display:none"'+
+                                'class="url widen_width widen_selected_images_width_'+i+'" type="text"' +
+                                'data-index="' + i + '" data-imgType="' + select_item_type + '"' +
+                                'value="" />'            
+                        
+                    }
+            
+            content += '<td><a href="#" class="btnDelete_' + i + '">' +
+                '<img src ="' + delete_icon + '" height="25" width="25"/></a>' +
+                '</td></tr>';
+            jQuery("#sortable-acquiadam").on('click', '.btnDelete_' + i, function () {
+                jQuery(this).closest('tr').remove();
+            });
+        });
+        jQuery('.dynamic-rows-acquiadam').find('.tbody_dynamic-acquiadam').html(content);
+    } 
+    
+    require(
+        [
+            'jquery',
+            'Magento_Ui/js/modal/modal',
+            'mage/cookies'
+        ],
+        function ($, modal) {
+            jQuery("#external_image_acquiadam").appendTo(
+                jQuery('.product_form_product_form_widen_url_modal').find('div .page-actions')
+            );
+            jQuery("#import_image_acquiadam").appendTo(
+                jQuery('.product_form_product_form_widen_url_modal').find('div .page-actions')
+            );
+            preloader.hide();
+            jQuery("div .page-actions #external_image_acquiadam").on("click", function () {
+                var options = {
+                    type: 'popup',
+                    responsive: true,
+                    innerScroll: true,
+                    buttons: [{
+                        text: $.mage.__('Continue'),
+                        class: 'pop-btn',
+                        click: function () {
+                            var url_separator = " \n";
+                            var selected_images = '';
+                            var widen_data = [];
+                            var img_alttext_details = [];
+                            var selected_img_details = [];
+                            jQuery(".image-checkbox").each(function (index) {
+                                if ($(this).is(":checked")) {
+                                    var selected_media_id = $(this).val();
+                                    var selected_data_id = $(this).attr('data-id');
+                                    var template_url = $(this).attr('data-templateurl');
+                                    var assets_type = $(this).attr('data-assetstype');
+                                    $(".image_input_box_" + selected_data_id).each(function () {
+                                        if ($(this).is(":checked")) {
+                                            var selected_img_url = $(this).attr("data-image");
+                                            var selected_altText = $(this).attr("data-altText");
+                                            var selected_image_role = $(this).attr("data-imagerole");
+                                            img_alttext_details.push(selected_altText);
+                                           
+                                            var b_img_data = {
+                                                "b_item_url" : selected_img_url,
+                                                "b_img_type" : assets_type,
+                                                "b_img_role" : selected_image_role,
+                                                "b_thum_url" : selected_img_url,
+                                                "b_img_alttext": selected_altText,
+                                                "b_template_url": template_url
+                                            };
+                                            
+                                            selected_img_details.push(b_img_data);
+                                        }
+                                    });
+                                }
+                            });
+                            
+                            add_widen_gallery_item(selected_img_details,img_alttext_details);
+                            this.closeModal();
+                        }
+                    }]
+                };
+                var popup = modal(options, $('#popup-modal-acquiadam'));
+                jQuery("#popup-modal-acquiadam").modal("openModal");
+                jQuery("#popup-modal-acquiadam").parents("div.modal-inner-wrap").addClass("customdialogbox");
+                
+                init_model_data();
+                
+            });
+    function add_widen_gallery_item(data_item,img_alttext_details_val) {
+        var old_selected_length = jQuery('.tbody_dynamic-acquiadam tr').length;
+        let item_length = data_item.length;
+        var ii = 0;
+        if (old_selected_length > 0) {
+            ii = old_selected_length;
+            item_length = old_selected_length + item_length;
+        }
+        var k = 0;
+        var content = "";
+        var old_data = [];
+        for(ii;ii < item_length; ii++){
+            var input_field_val = data_item.shift();
+            var item_v_url = input_field_val.b_item_url;
+            var select_item_type = input_field_val.b_img_type;
+            var item_thum_url = input_field_val.b_thum_url;
+            var item_alt_text = input_field_val.b_img_alttext;
+
+            var selected_template_url = input_field_val.b_template_url;
+
+            var selected_role = input_field_val.b_img_role;
+            var selected_role_array = [];
+            if(selected_role != ""){
+                selected_role_array = selected_role.split(",");
+            }
+            var item_val = item_v_url.split('?');
+            content = '<tr style="background: #efefef;" data-index="' + ii + '"><td>'
+            content += '<img src ="' + drag_img + '"/></td>'
+            content += '<td><input class="url widen_selected_images"' +
+                'type="text" data-index="' + ii + '"' +
+                'data-imgType="'+select_item_type+'"'+
+                'data-thumUrl="' + item_thum_url + '"' +
+                'data-isimport="0"' +
+                'data-selectedTemplateUrl="'+ selected_template_url +'"' +
+                'id="textboxId_' + ii + '"' +
+                'value="' + item_val[0] + '" />'
+            content += '</td>'
+            if(select_item_type == "image") {
+                    content += '<td><input class="url widen_selected_images_alttext" type="text"' +
+                'data-index="' + ii + '" id="alttext_' + ii + '"' +
+                'value="' + item_alt_text + '" />'
+            }else{
+                    content += '<td></td>'
+            }
+            content += '<td>'
+            if(select_item_type == "image"){
+                content += '<select name="image_rol"  size="5" class="image_role_'+ii+'" multiple>'
+                jQuery.each(attr, function (k, attr_val) {
+                    var selected = "";
+                    if(jQuery.inArray(attr_val.code, selected_role_array) > -1) {
+                        selected = 'selected';
+                    }
+                    content +='<option value="' + attr_val.code + '" '+selected+' >' + attr_val.label + '</option>';
+                });
+                content += '</select></td>'
+                content += '<td><img src ="' + item_val[0] + '" id="image_' + ii + '" height="100" width="100" /></td>'
+
+                content += '<td><input class="url widen_height widen_selected_images_height_'+ii+'" type="text"' +
+                'data-index="' + ii + '" value="" />'
+                content += '<td><input class="url widen_width widen_selected_images_width_'+ii+'" type="text"' +
+                'data-index="' + ii + '" value="" />'
+
+                }else{
+                    content += '<td><video width="100" height="100" controls>'+
+                                '<source src="'+ item_val[0] +'" type="video/mp4" id="video_'+ii+'">'+
+                                '</video></td>'
+                    content += '<td><input style="display:none"'+
+                                'class="url widen_height widen_selected_images_height_'+ii+'" type="text"' +
+                                'data-index="' + ii + '" value="" />'
+                    content += '<td><input style="display:none"' +
+                                'class="url widen_width widen_selected_images_width_'+ii+'" type="text"' +
+                                'data-index="' + ii + '" value="" />'
+                    
+                }
+            
+                content += '<td><a href="#" class="btnDelete_' + ii + '">' +
+                    '<img src ="' + delete_icon + '" height="25" width="25"/>' +
+                    '</a></td></tr>';
+            jQuery("#sortable-acquiadam").on('click', '.btnDelete_' + ii, function () {
+                jQuery(this).closest('tr').remove();
+            });
+            jQuery('.dynamic-rows-acquiadam').find('.tbody_dynamic-acquiadam').append(content);
+        }
+    }
+
+    function collect_new_popup_data(){
+        var all_selected_images = [];
+        jQuery('.widen_selected_images').each(function (i) {
+            var select_img = jQuery(this).val();
+            var item_index = jQuery(this).attr("data-index");
+            var item_img_type = jQuery(this).attr("data-imgType");
+
+            var is_imported = jQuery(this).attr("data-isimport");
+            var item_thum_url = jQuery(this).attr("data-thumUrl");
+            var selected_templateUrl = jQuery(this).attr("data-selectedTemplateUrl");
+
+            var image_role = jQuery('.image_role_' + item_index).val();
+            var image_alt_text = jQuery('#alttext_' + item_index).val();
+
+            var image_height = jQuery('.widen_selected_images_height_' + item_index).val();
+            var image_width = jQuery('.widen_selected_images_width_' + item_index).val();
+            
+            var new_img_val = getAllUrlParams(select_img).download;
+            var new_selected_url = select_img;
+            if(typeof new_img_val != "undefined"){
+                new_selected_url = new_selected_url.replace("&download=true", "");
+            }
+
+            var images_details = {
+                "item_url": new_selected_url,
+                "altText": image_alt_text,
+                "image_role": image_role,
+                "item_type": item_img_type,
+                "thum_url": item_thum_url,
+                "selected_template_url": selected_templateUrl,
+                "height" :image_height,
+                "width":image_width,
+                "is_import" : is_imported
+            };
+            all_selected_images.push(images_details);
+        });
+        if (all_selected_images.length > 0) {
+            var myJsonString = JSON.stringify(all_selected_images);
+        } else {
+            var myJsonString = "";
+        }
+        return myJsonString;
+    }
+
+    function save_widen_data(myJsonString){
+        jQuery('textarea[name="product[widen_multi_img]"]').val(myJsonString);
+        var image_coockie_id = 0;
+        try{
+            image_coockie_id = Cookies.get('image_coockie_id');
+        }catch(err){
+            document.cookie = "image_coockie_id=" + image_coockie_id + "; path=/;";
+        }
+        var product_id = '<?= $block->escapeHtml($productId); ?>';
+        $.ajax({
+            url: add_temp_data,
+            showLoader: true,
+            data: {
+                product_id: product_id,
+                image:myJsonString,
+                image_coockie_id:image_coockie_id
+            },
+            success: function (res) {
+                /* success data*/
+            },
+        });
+    }
+
+    jQuery(".save_image").on('click', function () {
+        var newJsonString = collect_new_popup_data();
+        save_widen_data(newJsonString);
+    });
+
+    jQuery('#import_image_acquiadam').click(function () {
+        var newJsonString = collect_new_popup_data();
+        var id = '<?= $block->escapeHtml($productId); ?>';
+        var sku = '<?= $block->escapeHtml($sku); ?>';
+        var widen_img_n = '<?= $block->escapeHtml($widen_image); ?>';
+        $.ajax({
+            url: import_image_url,
+            showLoader: true,
+            dataType: 'json',
+            data: {
+                product_id: id,
+                widen_in:widen_img_n,
+                image:newJsonString,
+                sku:sku
+            },
+            success: function (res) {
+                if(res.status == 1){
+                    var image_new_json = res.data;
+                    $.each(image_new_json,function(i,v){
+                        $("#textboxId_"+i).attr("data-isimport",v.is_import);
+                    });
+                    var newJsonString = collect_new_popup_data();
+                    save_widen_data(newJsonString);    
+                }
+                $(".success-msg-sync").show();
+                $(".error-msg-sync").hide();
+                $(".success-msg-sync").html("Image Import in Folder Successfully...!");
+                setTimeout(function () { 
+                    $('.success-msg-sync').delay(5000).fadeOut('slow');
+                },5000);
+            },
+        });
+    });
+    jQuery("#sortable-acquiadam tbody").sortable({
+        cursor: "move",
+        placeholder: "sortable-placeholder",
+        helper: function (e, tr) {
+            var $originals = tr.children();
+            var $helper = tr.clone();
+            $helper.children().each(function (index) {
+                jQuery(this).width($originals.eq(index).width());
+            });
+            return $helper;
+        }
+    }).disableSelection();
+
+    
+});
+
+function getAllUrlParams(url) {
+    var queryString = url ? url.split('?')[1] : window.location.search.slice(1);
+    var obj = {};
+    if (queryString) {
+        queryString = queryString.split('#')[0];
+        var arr = queryString.split('&');
+
+        for (var i = 0; i < arr.length; i++) {
+            var a = arr[i].split('=');
+            var paramName = a[0];
+            var paramValue = typeof (a[1]) === 'undefined' ? true : a[1];
+
+            paramName = paramName.toLowerCase();
+            if (typeof paramValue === 'string') paramValue = paramValue.toLowerCase();
+
+            if (paramName.match(/\[(\d+)?\]$/)) {
+
+                var key = paramName.replace(/\[(\d+)?\]/, '');
+                if (!obj[key]) obj[key] = [];
+
+                if (paramName.match(/\[\d+\]$/)) {
+                    var index = /\[(\d+)\]/.exec(paramName)[1];
+                    obj[key][index] = paramValue;
+                } else {
+                    obj[key].push(paramValue);
+                }
+            } else {
+                if (!obj[paramName]) {
+                    obj[paramName] = paramValue;
+                } else if (obj[paramName] && typeof obj[paramName] === 'string'){
+                    obj[paramName] = [obj[paramName]];
+                    obj[paramName].push(paramValue);
+                } else {
+                    obj[paramName].push(paramValue);
+                }
+            }
+        }
+    }
+    return obj;
+}
+
+/* below code by kuldip as new design */
+function init_model_data(){
+        preloader.css("height", "100vh");
+        preloader.children().show();
+        let query = "modalLoadData";
+        jQuery("#getAssetData").val("");
+        jQuery.ajax({
+            type: "POST",
+            url: get_widen_image_url,
+            dataType: "JSON",
+            data: {
+                query: query,
+            },
+            beforeSend: function() {
+                jQuery("#popup-modal-acquiadam").html($(preloader).html());
+                $(preloader).attr("css","position:relative");
+            },
+            success: function(res) {
+                preloader.css("height", 0);
+                preloader.children().hide();
+                jQuery('#customdialogbox1').css("display", "block");
+                if (res.newDiv != "") {
+                    document.getElementById("popup-modal-acquiadam").innerHTML = res.newDiv;
+                    flag = 0;
+                } else {
+                    document.getElementById("popup-modal-acquiadam").innerHTML = res.msg;
+                }
+            },
+        });
+    }
+    function checkboxValue(checkboxPopValue = "",categoryWiseSearch = "",sortingData = "",sorting = "",checkBoxPushValue = "") {
+        /* preloader.css("height", "100vh");
+        preloader.children().show(); */
+        
+        let query = "checkboxValue";
+        let iValueData = document.getElementById("iValue").value;
+        let sortingValue = jQuery("#sortingData").val();
+        let goKey = "";
+        let getAssetData = "";
+        let searchKey = "";
+        let sort = "";
+        let checkBoxVal = new Array();
+        if (
+            document.getElementById("goKey").value != "" &&
+            checkboxPopValue != document.getElementById("goKey").value
+        ) {
+            goKey = document.getElementById("goKey").value;
+            checkBoxVal.push(goKey);
+        } else if (checkBoxPushValue == "goKey") {
+            goKey = document.getElementById("goKey").value;
+            checkBoxVal.push(goKey);
+        }
+        if (
+            document.getElementById("searchKey").value != "" &&
+            checkboxPopValue != document.getElementById("searchKey").value
+        ) {
+            searchKey = document.getElementById("searchKey").value;
+            checkBoxVal.push(searchKey);
+        } else if (checkBoxPushValue == "searchKey") {
+            searchKey = document.getElementById("searchKey").value;
+            checkBoxVal.push(searchKey);
+        }
+        if (
+            (document.getElementById("getAssetData").value != "" &&
+                checkboxPopValue !=
+                document.getElementById("getAssetData").value) ||
+            categoryWiseSearch != ""
+        ) {
+            if (
+                categoryWiseSearch != "" &&
+                document.getElementById("getAssetData").value == ""
+            ) {
+                getAssetData = categoryWiseSearch;
+                jQuery("#getAssetData").val(getAssetData);
+                checkBoxVal.push(categoryWiseSearch);
+                
+            } else if (checkBoxPushValue == "getAssetData") {
+                getAssetData = document.getElementById("getAssetData").value;
+                checkBoxVal.push(getAssetData);
+                
+            } else {
+                getAssetData = document.getElementById("getAssetData").value;
+                checkBoxVal.push(getAssetData);
+                
+            }
+        }
+        if (checkBoxPushValue == "") {
+            for (i = 0; i <= iValueData; i++) {
+                if (jQuery("#cb" + i).is(":checked")) {
+                    let checkBoxVal1 = document.getElementById("cb" + i).value;
+                    if (checkBoxVal1 != "") {
+                        checkBoxVal.push(checkBoxVal1);
+                    }
+                }
+            }
+        }
+        if (checkboxPopValue != "") {
+            checkBoxVal = checkBoxVal.filter((e) => e !== checkboxPopValue);
+            if (checkboxPopValue == document.getElementById("getAssetData").value) {
+                jQuery("#getAssetData").val("");
+             
+            }
+            if (checkboxPopValue == document.getElementById("searchKey").value) {
+                jQuery("#searchKey").val("");
+                
+            }
+            if (checkboxPopValue == document.getElementById("goKey").value) {
+                jQuery("#goKey").val("");
+                
+            }
+        }
+        if (sortingData) {
+            sort = sorting + sortingData;
+            
+        } else {
+            sort = sorting + sortingValue;
+           
+        }
+        jQuery.ajax({
+            type: "POST",
+            url: get_widen_image_url,
+            dataType: "JSON",            
+            data: {
+                query: query,
+                goKey: goKey,
+                getAssetData: getAssetData,
+                searchKey: searchKey,
+                checkBoxVal: JSON.stringify(checkBoxVal),
+                sortingData: sort,
+            },
+            success: function(res) {
+                /* preloader.css("height", 0);
+                preloader.children().hide(); */
+                jQuery("#innerLoader").css("height", "0");
+                jQuery("#innerLoader").children().hide();
+                if (res.newDiv != "") {
+                    document.getElementById("modal-body").innerHTML = res.newDiv;
+                    flag = 0;
+                    if (sortingData) $("#sortingData").val(sortingData);
+                    if (sortingValue != "") $("#sortingData").val(sortingValue);
+                    if (sorting != "") {
+                       
+                        jQuery("#descending").hide();
+                        jQuery("#ascending").show();
+                    } else {
+                        jQuery("#descending").show();
+                        jQuery("#ascending").hide();
+                    }
+                } else {
+                    document.getElementById("imgData").innerHTML = res.msg;
+                }
+            },
+        });
+    }
+
+    function removeCheckboxSearch(kValue) {
+        crossValue = document.getElementById(
+            "removeCheckboxSearch" + kValue
+        ).innerHTML;
+        checkboxValue(crossValue);
+    }
+    
+    function categoryWiseSearch(categoryName) {
+        jQuery("#innerLoader").css("height", "100%");
+        jQuery("#innerLoader").children().show();
+        let categoryWiseSearch = categoryName;
+        checkboxValue("", categoryWiseSearch);
+    }
+
+    document.addEventListener(
+        "scroll",
+        function() {
+            if (
+                jQuery("#image-list").scrollTop() + jQuery("#image-list").height() >=
+                jQuery("#imgData").height() &&
+                flag == 0
+            ) {
+                flag = 1;
+                let sortingValue = jQuery("#sortingData").val();
+                let query = "loadMoreBtn";
+                let scrollId = document.getElementById("scrollId").value;
+                let jValueData = document.getElementById("jValue").value;
+                var selected_all_value = jQuery(".all-select").attr("data-selected");
+                jQuery.ajax({
+                    type: "POST",
+                    url: get_widen_image_url,
+                    dataType: "JSON",
+                    beforeSend: function() {
+                        jQuery("#innerLoader").css("height", "100%");
+                        jQuery("#innerLoader").children().show();
+                    },                    
+                    data: {
+                        scrollId: scrollId,
+                        query: query,
+                        jValueData: jValueData,
+                        selectAllValue : selected_all_value
+                    },
+                    success: function(res) {
+                        jQuery("#innerLoader").css("height", "0");
+                        jQuery("#innerLoader").children().hide();
+                        if (res.newDiv == "") {
+                            jQuery("#jValue").val(res.j);
+                            if (sortingValue != ""){
+                                jQuery("#sortingData").val(sortingValue);
+                            }
+                        } else {
+                            jQuery("#imgData").append(res.newDiv);
+                            jQuery("#jValue").val(res.j);
+                            flag = 0;
+                        }
+                    },
+                });
+            }
+        },
+        true
+    );
+
+
+    jQuery(document).on("click", "#clearAll", function() {
+        init_model_data();
+    });
+
+    jQuery(document).on("change", "#getAssetData", function() {
+        jQuery("#innerLoader").css("height", "100%");
+        jQuery("#innerLoader").children().show();
+        checkboxValue("", "", "", "", "getAssetData");
+    });
+
+    jQuery(document).on("click", "#searchBtn", function() {
+        jQuery("#innerLoader").css("height", "100%");
+        jQuery("#innerLoader").children().show();
+        checkboxValue("", "", "", "", "searchBtn");
+    });
+
+    jQuery(document).on("change", "#sortingData", function() {
+        let sortingData = document.getElementById("sortingData").value;
+      
+        checkboxValue("", "", sortingData);
+    });
+
+    jQuery(document).on("click", "#ascending", function() {
+        let sortingData = document.getElementById("sortingData").value;
+      
+        checkboxValue("", "", sortingData, "");
+        jQuery("#descending").show();
+        jQuery("#ascending").hide();
+    });
+
+    jQuery(document).on("click", "#descending", function() {
+        let sortingData = document.getElementById("sortingData").value;
+        
+        checkboxValue("", "", sortingData, "-");
+        jQuery("#descending").hide();
+        jQuery("#ascending").show();
+    });
+
+    this.isOpen = false;
+
+    jQuery(document).ready(function() {
+        jQuery("body").click(function() {
+            if (jQuery(".dropdown-list").hasClass("is-active")) {
+                jQuery(".dropdown-list").removeClass("is-active");
+                jQuery(".dropdown-list").hide();
+                this.isOpen = false;
+            } else {}
+        });
+
+        jQuery("#imgData").addClass("column-4");
+        jQuery(document).on("click", "#columnData", function() {
+                var column_value = jQuery(this).val();
+                if (column_value == "") {
+                    jQuery("#imgData").removeClass();
+                    jQuery("#imgData").addClass("row");
+                    jQuery("#imgData").addClass("column-4");
+                } else {
+                    jQuery("#imgData").removeClass();
+                    jQuery("#imgData").addClass("row");
+                    jQuery("#imgData").addClass("column-" + column_value);
+                }
+            });
+
+            jQuery(document).on("change", ".dropdown-list li label", function() {
+                jQuery(this).closest('.dropdown-list').addClass('is-active');
+                jQuery(this).closest('.dropdown-list').show();
+            });
+
+            jQuery(document).on('keydown', function(e) {
+                if (e.keyCode == 27){
+                    jQuery('.modal-popup').show();
+                }
+            });
+    });
+
+    jQuery(document).on("click", "div.dropdown", function() {
+        if (!this.isOpen) {
+            this.isOpen = true;
+            
+            jQuery(this).find(".dropdown-list").show();
+            jQuery(this).find(".dropdown-list").addClass("is-active");
+        } else {
+            this.isOpen = false;
+            jQuery(this).find(".dropdown-list").hide();
+            jQuery(this).find(".dropdown-list").removeClass("is-active");
+        }
+    });
+
+    jQuery(document).keypress(function(event) {
+        if (event.which == "13") {
+            event.preventDefault();
+            if (document.getElementById("searchKey").value != "") {
+                jQuery("#innerLoader").css("height", "100%");
+                jQuery("#innerLoader").children().show();
+                checkboxValue();
+            } else if (document.getElementById("goKey").value != "") {
+                jQuery("#innerLoader").css("height", "100%");
+                jQuery("#innerLoader").children().show();
+                let goKey = document.getElementById("goKey").value;
+                checkboxValue("", "", "", "", goKey);
+            } else {
+                checkboxValue();
+            }
+        }
+    });
+
+    jQuery(document).on("click", "#goBtn", function() {
+        jQuery("#innerLoader").css("height", "100%");
+        jQuery("#innerLoader").children().show();
+        checkboxValue("", "", "", "", "goBtn");
+    });
+
+
+
+</script>
+<script>
+    jQuery('body').trigger('contentUpdated');
+</script>

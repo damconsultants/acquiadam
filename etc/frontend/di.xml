@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:ObjectManager/etc/config.xsd">
+    <preference for="Magento\Catalog\Block\Product\View\Gallery" type="DamConsultants\AcquiaDam\Block\Product\View\Gallery" />
+    <preference for="Magento\Catalog\Block\Product\ImageFactory" type="DamConsultants\AcquiaDam\Block\Product\ImageFactory" />
+    <type name="Magento\Checkout\CustomerData\AbstractItem">
+        <plugin name="Change_Product_Image_In_Minicart" type="DamConsultants\AcquiaDam\Plugin\Minicart\Image" sortOrder="1"/>
+    </type>
+    <type name="Magento\Checkout\Model\DefaultConfigProvider">
+        <plugin name="default_config_provider" type="DamConsultants\AcquiaDam\Model\DefaultConfigProvider"/>
+    </type>
+</config>

@@ -1,0 +1,18 @@
+<?php
+$product = $block->getProduct();
+
+$document_text = $product->getData('acquiadam_document');
+
+if (!empty($document_text)) {
+    $document_array = json_decode($document_text, true);
+    $html = "";
+    if (!empty($document_array)) {
+        foreach ($document_array as $doc) {
+            $html .= '<li><a target="_blank" href="' . $doc['item_url'] . '">' . $doc['doc_name'] . '</a></li>';
+        }
+    }
+    ?>
+<ul>
+    <?= /* @noEscape */ $html ?>
+</ul>
+<?php } ?>

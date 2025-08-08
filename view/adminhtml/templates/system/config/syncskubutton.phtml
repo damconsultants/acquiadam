@@ -1,0 +1,89 @@
+
+<div class="pp-buttons-container">
+    <?= $block->getButtonHtml(); ?>
+</div>
+
+
+<script>
+    require([
+        'jquery',
+        'prototype'
+    ], function ($) {
+
+        $('#sync_sku_button').click(function () {
+            var product_sku = $('textarea#widensyncdata_widen_sync_data_sku').val();
+            var select_attribute = $('select#widensyncdata_widen_sync_data_select').val();
+
+            var is_widen_cdn = 0;
+            var is_magento_imp = 0;
+
+            if ($('#widensyncdata_widen_sync_data_check_cdn_checkbox').is(":checked")){
+                is_widen_cdn = 1;
+            }
+            
+            if ($('#widensyncdata_widen_sync_data_magento_import_checkbox').is(":checked")){
+                is_magento_imp = 1;
+            }
+            
+            var params = {
+                product_sku: product_sku,
+                select_attribute: select_attribute,
+                is_magento_import: is_magento_imp,
+                is_widen_cdn    : is_widen_cdn
+            };
+            new Ajax.Request('<?= $block->escapeUrl($block->getAjaxUrl()); ?>', {
+                parameters: params,
+                loaderArea: true,
+                asynchronous: true,
+                beforeSend: function () {
+                    $('body').trigger('processStart');
+                },
+                onSuccess: function (transport) {
+                    var resultText = '';
+                    if (transport.responseJSON.status == 1) {
+                        resultText = transport.statusText;
+                        $('#widensyncdata_widen_sync_data_sku').text('');
+                        $(".success-msg-sync").show();
+                        $(".error-msg-sync").hide();
+                        $(".success-msg-sync").html(transport.responseJSON.message);
+                        setTimeout(function () { 
+                            $('.success-msg-sync').delay(5000).fadeOut('slow');
+                        }, 5000);
+                    } else {
+                        /*console.log(transport.responseJSON.message);*/
+                        resultText = transport.responseJSON.message
+                        $('#widensyncdata_widen_sync_data_sku').text('');
+                        $(".error-msg-sync").show();
+                        $(".success-msg-sync").hide();
+                        $(".error-msg-sync").html(resultText);
+                        setTimeout(function () { 
+                            $('.error-msg-sync').delay(5000).fadeOut('slow');
+                        }, 5000);
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+
+<style>
+    .success-msg-sync,
+    .error-msg-sync {
+        margin: 10px 0;
+        padding: 10px;
+        border-radius: 3px 3px 3px 3px;
+    }
+
+    .success-msg-sync {
+        color: #270;
+        background-color: #DFF2BF;
+    }
+
+    .error-msg-sync {
+        color: #D8000C;
+        background-color: #FFBABA;
+    }
+</style>
+<div class="success-msg-sync" style="display:none;"></div>
+<div class="error-msg-sync" style="display:none;"></div>
