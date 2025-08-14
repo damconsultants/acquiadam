@@ -67,7 +67,7 @@ class Submit extends \Magento\Backend\App\Action
                         "id" => $metacollection['id'],
                         "property_name" => $metacollection['property_name'],
                         "property_id" => $metacollection['property_id'],
-                        "acquiadam_property_slug" => $metacollection['acquiadam_property_slug'],
+                        "widen_property_slug" => $metacollection['widen_property_slug'],
                         "system_slug" => $metacollection['system_slug'],
                         "system_name" => $metacollection['system_name'],
                     ];
@@ -86,7 +86,7 @@ class Submit extends \Magento\Backend\App\Action
                     
                     $model->setData('property_name', $select_meta_tag[$key]);
                     $model->setData('property_id', $select_meta_tag[$key]);
-                    $model->setData('acquiadam_property_slug', $select_meta_tag[$key]);
+                    $model->setData('widen_property_slug', $select_meta_tag[$key]);
                     $model->setData('system_slug', $form_system_slug);
                     $model->setData('system_name', $form_system_slug);
                     $model->save();
@@ -97,7 +97,7 @@ class Submit extends \Magento\Backend\App\Action
                     $model = $this->metaProperty->create();
                     $model->setData('property_name', $select_meta_tag[$key]);
                     $model->setData('property_id', $select_meta_tag[$key]);
-                    $model->setData('acquiadam_property_slug', $select_meta_tag[$key]);
+                    $model->setData('widen_property_slug', $select_meta_tag[$key]);
                     $model->setData('system_slug', $form_system_slug);
                     $model->setData('system_name', $form_system_slug);
                     $model->save();

@@ -81,7 +81,7 @@ class Index extends \Magento\Backend\Block\Template
         $defaultmetaPropertycollection_data = $defaultmetaPropertycollection->getData();
         if (count($defaultmetaPropertycollection_data) > 0) {
             foreach ($defaultmetaPropertycollection_data as $meta_val) {
-                $attribute_array[$meta_val['acquiadam_property_slug']] = $meta_val['property_name'];
+                $attribute_array[$meta_val['widen_property_slug']] = $meta_val['property_name'];
             }
         }
         $collection = $this->_metaPropertyCollectionFactory->create();
@@ -98,28 +98,32 @@ class Index extends \Magento\Backend\Block\Template
                     "id" => $metacollection['id'],
                     "property_name" => $metacollection['property_name'],
                     "property_id" => $metacollection['property_id'],
-                    "acquiadam_property_slug" => $metacollection['acquiadam_property_slug'],
+                    "widen_property_slug" => $metacollection['widen_property_slug'],
                     "system_slug" => $metacollection['system_slug'],
                     "system_name" => $metacollection['system_name'],
                 ];
             }
-            $response_data['sku_selected'] = isset($properties_details["sku"]["acquiadam_property_slug"])
-            ? $properties_details["sku"]["acquiadam_property_slug"]
+            $response_data['style_selected'] = isset($properties_details["style"]["widen_property_slug"])
+            ? $properties_details["style"]["widen_property_slug"]
             : '0';
-            $response_data['image_role_selected'] = isset($properties_details["image_role"]["acquiadam_property_slug"])
-            ? $properties_details["image_role"]["acquiadam_property_slug"]
+            $response_data['image_role_selected'] = isset($properties_details["image_role"]["widen_property_slug"])
+            ? $properties_details["image_role"]["widen_property_slug"]
             : '0';
-            $response_data['image_alt_text'] = isset($properties_details["alt_text"]["acquiadam_property_slug"])
-            ? $properties_details["alt_text"]["acquiadam_property_slug"]
+            $response_data['image_alt_text'] = isset($properties_details["alt_text"]["widen_property_slug"])
+            ? $properties_details["alt_text"]["widen_property_slug"]
             : '0';
-            $response_data['image_color'] = isset($properties_details["color"]["acquiadam_property_slug"])
-            ? $properties_details["color"]["acquiadam_property_slug"]
+            $response_data['image_color'] = isset($properties_details["color"]["widen_property_slug"])
+            ? $properties_details["color"]["widen_property_slug"]
+            : '0';
+			$response_data['order'] = isset($properties_details["orders"]["widen_property_slug"])
+            ? $properties_details["orders"]["widen_property_slug"]
             : '0';
         } else {
-            $response_data['sku_selected'] = '0';
+            $response_data['style_selected'] = '0';
             $response_data['image_role_selected'] = '0';
             $response_data['image_alt_text'] = '0';
             $response_data['image_color'] = '0';
+			$response_data['order'] = '0';
         }
         return $response_data;
     }

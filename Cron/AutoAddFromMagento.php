@@ -133,7 +133,14 @@ class AutoAddFromMagento
         }
         if (count($productSku_array) > 0) {
             foreach ($productSku_array as $sku) {
-                $get_data =  $this->datahelper->getAcquiaDamImageSyncWithProperties($sku, $properties_details);
+				$_product = $this->_productRepository->get($sku);
+				if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
+                    $color_style = [
+                        "color_number" =>  $_product->getAttributeText('color'),
+                        "style_number" =>  $_product->getStyle()
+                    ];	
+				}
+                $get_data =  $this->datahelper->getAcquiaDamImageSyncWithProperties($color_style, $properties_details);
                 $get_data_json_decode = json_decode($get_data, true);
                 $fetch_details = $get_data_json_decode['data'];
                 if (count($fetch_details) > 0) {

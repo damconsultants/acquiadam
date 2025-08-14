@@ -1,10 +1,11 @@
 <?php
 $block_data = $block->getMetaData();
 $get_metaData = $block_data['metadata'];
-$default_sku_value = $block_data['sku_selected'];
+$default_sku_value = $block_data['style_selected'];
 $default_image_role_value = $block_data['image_role_selected'];
 $default_image_alt_text = $block_data['image_alt_text'];
 $default_color = $block_data['image_color'];
+$default_order = $block_data['order'];
 $url = $block->getMainUrl();
 $syncMetaUrl = $url."acquiadam/index/synmetaproperty";
 
@@ -12,12 +13,14 @@ $sku_properites = "";
 $image_role_properites = "";
 $alt_properites = "";
 $color_properites = "";
+$order_properites = "";
 if (count($get_metaData) > 0) {
     foreach ($get_metaData as $newKey => $newValue) {
         $sku_checked = "";
         $image_role_checked = "";
         $alt_checked = "";
 		$color_checked = "";
+		$order_checked = "";
         if ($default_sku_value == $newKey) {
             $sku_checked = "selected";
         } elseif ($default_image_role_value == $newKey) {
@@ -26,6 +29,8 @@ if (count($get_metaData) > 0) {
             $alt_checked = "selected";
         } elseif ($default_color == $newKey) {
             $color_checked = "selected";
+        } elseif ($default_order == $newKey) {
+            $order_checked = "selected";
         } 
         $sku_properites .= '<option value="' . $newKey . '" ' . $sku_checked . ' >' .
                         $block->escapeHtml($newValue) .
@@ -34,6 +39,9 @@ if (count($get_metaData) > 0) {
                         $block->escapeHtml($newValue) .
                         '</option>';
         $image_role_properites .= '<option value="' . $newKey . '" ' . $image_role_checked . ' >' .
+                        $block->escapeHtml($newValue) .
+                        '</option>';
+		$order_properites .= '<option value="' . $newKey . '" ' . $order_checked . ' >' .
                         $block->escapeHtml($newValue) .
                         '</option>';
         $alt_properites .= '<option value="' . $newKey . '" ' . $alt_checked . ' >' .
@@ -59,7 +67,7 @@ if (count($get_metaData) > 0) {
             <div class="product-imp-list">
                 <h4 class="product-imp-label"> The Meta Property Configration For the Style Number:-</h4>
                 <div class="form-check form-check-inline">
-                        <input type="hidden" name="system_slug[]" value="sku" />
+                        <input type="hidden" name="system_slug[]" value="style" />
                         <p class="form-check-label">Property List:- </p>
                         <select class="selectbox_item" id="acquiadam_property" name="select_meta_tag[]">
                             <option value="0">Select The option</option>
@@ -92,6 +100,18 @@ if (count($get_metaData) > 0) {
                                     <?= $image_role_properites; ?>
                                 </select>
                         </div>
+            </div>
+			
+			<div class="product-imp-list">
+                <h4 class="product-imp-label"> The Meta Property Configration For the Order :-</h4>
+				<div class="form-check form-check-inline">
+						<p class="form-check-label"> Property List:- </p>
+						<input type="hidden" name="system_slug[]" value="orders" />
+						<select class="selectbox_item" id="acquiadam_property_order" name="select_meta_tag[]">
+							<option value="0">Select The option</option>
+							<?= $order_properites; ?>
+						</select>
+				</div>
             </div>
 
 

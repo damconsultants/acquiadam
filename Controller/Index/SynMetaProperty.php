@@ -132,7 +132,7 @@ class SynMetaProperty extends \Magento\Framework\App\Action\Action
                         $data =  [
                             'property_name' => $meta,
                             'property_id' => $key,
-                            'acquiadam_property_slug' => $key,
+                            'widen_property_slug' => $key,
                             'property_search_query' => "",
                             'possible_values' => "",
                             'status' => 1

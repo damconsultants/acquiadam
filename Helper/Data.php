@@ -506,17 +506,18 @@ class Data extends AbstractHelper
      * @param string $sku
      * @param string $properties_details
      */
-    public function getAcquiaDamImageSyncWithProperties($sku, $properties_details)
+    public function getAcquiaDamImageSyncWithProperties($color_style, $properties_details)
     {
         $post_filed_array = [
             "permentant_token" => $this->getPermanentToken(),
             "param_data" => [
-                'sku' => $sku,
+				'color_number' => $color_style['color_number'],
+                'style_number' => $color_style['style_number'],
                 'properties_details' => $properties_details
             ]
         ];
         $param_data_json_value = json_encode($post_filed_array);
-        $request_url = self::API_CALLED . 'get-sku-wise-sync-data';
+        $request_url = self::API_CALLED . 'get-sku-wise-sync-data-five11';
         $jsonData = '{}';
         
         $this->_curl->setOption(CURLOPT_URL, $request_url);

@@ -175,10 +175,29 @@ class SyncSku extends \Magento\Backend\App\Action
             );
             return $result_data;
         }
+		$color_style = [];
         if (strlen($product_sku) > 0) {
             $productSku = explode(",", $product_sku);
             foreach ($productSku as $sku) {
-                $get_data =  $this->_helperData->getAcquiaDamImageSyncWithProperties($sku, $properties_details);
+				try {
+					$_product = $this->_productRepository->get($sku);
+				} catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
+					$insert_data = [
+                        "sku" => $sku,
+                        "message" => "Sku not match in products",
+                        "data_type" => "",
+                        "lable" => "0"
+                    ];
+                    $this->getInsertDataTable($insert_data);
+					continue;
+				}
+				if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
+                    $color_style = [
+                        "color_number" =>  $_product->getAttributeText('color'),
+                        "style_number" =>  $_product->getStyle()
+                    ];	
+				}
+                $get_data =  $this->_helperData->getAcquiaDamImageSyncWithProperties($color_style, $properties_details);
                 $get_data_json_decode = json_decode($get_data, true);
                 $fetch_details = $get_data_json_decode['data'];
                 if (count($fetch_details) > 0) {
@@ -209,7 +228,7 @@ class SyncSku extends \Magento\Backend\App\Action
                     $this->getInsertDataTable($insert_data);
                 }
 
-            }
+            };
             $result_data = $result->setData([
                 'status' => 1,
                 'message' => 'Data Sync Successfully.Please check AcquiaDam Synchronization Log.!'
@@ -294,6 +313,9 @@ class SyncSku extends \Magento\Backend\App\Action
                                 $image_url_new = $this->getPerfectVideoUrl($data_value["Image_Url"]);
                                 $width = '';
                                 $height = '';
+                                //$widen_role_array = $data_value['image_roles'];
+                                $img_role = $this->getRoleArray($data_value);
+                                
                                 $parsedUrl = \parse_url($image_url_new);
                                 $item_url = explode("?", $image_url_new);
                                 if (isset($parsedUrl['query'])) {
@@ -301,11 +323,12 @@ class SyncSku extends \Magento\Backend\App\Action
                                     $width = isset($queryParams['w']) ? $queryParams['w'] : '';
                                     $height = isset($queryParams['h']) ? $queryParams['h'] : '';
                                 }
+                                
                                 if (!in_array($item_url[0], $all_item_url)) {
                                     $diff_image_detail[] = [
                                         "item_url" => $item_url[0],
                                         "altText" => $data_value['Alt_Text'],
-                                        "image_role" => $data_value['image_roles'],
+                                        "image_role" => $img_role,
                                         "item_type" => $data_value['Type'],
                                         "thum_url" => $item_url[0],
                                         "selected_template_url" => $item_url[0],
@@ -317,7 +340,7 @@ class SyncSku extends \Magento\Backend\App\Action
                                     $image_detail[] = [
                                         "item_url" => $item_url[0],
                                         "altText" => $data_value['Alt_Text'],
-                                        "image_role" => $data_value['image_roles'],
+                                        "image_role" => $img_role,
                                         "item_type" => $data_value['Type'],
                                         "thum_url" => $item_url[0],
                                         "selected_template_url" => $item_url[0],
@@ -436,6 +459,10 @@ class SyncSku extends \Magento\Backend\App\Action
                             $image_url_new = $this->getPerfectVideoUrl($data_value["Image_Url"]);
                             $width = '';
                             $height = '';
+
+                            //$widen_role_array = $data_value['image_roles'];
+                            $img_role = $this->getRoleArray($data_value);
+
                             $parsedUrl = \parse_url($image_url_new);
                             $item_url = explode("?", $image_url_new);
                             if (isset($parsedUrl['query'])) {
@@ -446,7 +473,7 @@ class SyncSku extends \Magento\Backend\App\Action
                             $image_detail[] = [
                                 "item_url" => $item_url[0],
                                 "altText" => $data_value['Alt_Text'],
-                                "image_role" => $data_value['image_roles'],
+                                "image_role" => $img_role,
                                 "item_type" => $data_value['Type'],
                                 "thum_url" => $item_url[0],
                                 "selected_template_url" => $item_url[0],
@@ -497,6 +524,7 @@ class SyncSku extends \Magento\Backend\App\Action
                     );
                 }
             } elseif ($select_attribute == "video") {
+                $product_sku_key = "";
                 if (!empty($image_value)) {
                     $item_old_value = json_decode($image_value, true);
                     if (count($item_old_value) > 0) {
@@ -570,6 +598,7 @@ class SyncSku extends \Magento\Backend\App\Action
                 } else {
                     foreach ($get_data as $data_value) {
                         if ($data_value['Type'] == 'video') {
+                            $product_sku_key = "";
                             $data_img_url = $this->getPerfectVideoUrl($data_value["Image_Url"]);
                             $video_detail[] = [
                                 "item_url" => $data_img_url,
@@ -623,6 +652,8 @@ class SyncSku extends \Magento\Backend\App\Action
                 if (empty($doc_value)) {
                     $doc_detail=[];
                     foreach ($get_data as $data_value) {
+                        // make this variable dynamic - pending
+                        $product_sku_key = "";
                         if ($data_value['Type'] == 'pdf' || $data_value['Type'] == 'office') {
                             $data_doc_url = $this->getPerfectVideoUrl($data_value["Image_Url"]);
                             $doc_detail[] = [
@@ -781,5 +812,29 @@ class SyncSku extends \Magento\Backend\App\Action
             }
         }
         return json_encode($new_json_decode, true);
+    }
+
+    /**
+     * Get Role Array
+     *
+     * @param array $widen_role_array
+     */
+    public function getRoleArray($widen_role_array)
+    {
+        if(in_array("ALL",$widen_role_array['image_roles'])){
+            $img_role = ["image","small_image","thumbnail","swatch_image"];
+        }
+        else if($widen_role_array['image_roles'] == "BASE"){
+            $img_role = ["image"];
+        }
+        else if($widen_role_array['image_roles'] == "SMALL"){
+            $img_role = ["small_image"];
+        }
+        else if($widen_role_array['image_roles'] == "THUMB"){
+            $img_role = ["thumbnail"];
+        }else{
+            $img_role = [];
+        }
+        return $img_role;
     }
 }
