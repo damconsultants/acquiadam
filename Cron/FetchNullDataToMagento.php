@@ -223,7 +223,7 @@ class FetchNullDataToMagento
                             $item_url = explode("?", $data_img_url);
                             if (!in_array($item_url[0], $all_item_url)) {
                                 if ($data_value['Type'] == 'image') {
-                                    $new_image_role = $data_value['image_roles'];
+                                    $new_image_role = $this->getRoleArray($data_value);;
                                 } else {
                                     $new_image_role = null;
                                 }
@@ -244,6 +244,7 @@ class FetchNullDataToMagento
                                     "selected_template_url" => $item_url[0],
                                     "height" => $height,
                                     "width"=> $width,
+									"asset_order" => $data_value['asset_order'],
                                     "is_import" => "0"
 
                                 ];
@@ -262,7 +263,10 @@ class FetchNullDataToMagento
                             if ($data_value['Type'] == 'pdf' || $data_value['Type'] == 'office') {
                                 $doc_detail[] = [
                                     "item_url" => $data_img_url,
+                                    "item_type" => $data_value['Type'],
                                     "altText" => $data_value['Alt_Text'],
+                                    "doc_name" => $data_value['Alt_Text'],
+									"asset_order" => $data_value['asset_order']
                                 ];
                                 $data_doc_data = [
                                     'sku' => $sku,
@@ -326,7 +330,7 @@ class FetchNullDataToMagento
                         $item_url = explode("?", $data_img_url);
                         if ($data_value['Type'] == 'image' || $data_value['Type'] == 'video') {
                             if ($data_value['Type'] == 'image') {
-                                $new_image_role = $data_value['image_roles'];
+                                $new_image_role = $this->getRoleArray($data_value);
                             } else {
                                 $new_image_role = null;
                             }
@@ -347,6 +351,7 @@ class FetchNullDataToMagento
                                 "selected_template_url" => $item_url[0],
                                 "height" => $height,
                                 "width"=> $width,
+								"asset_order" => $data_value['asset_order'],
                                 "is_import" => "0"
         
                             ];
@@ -364,7 +369,10 @@ class FetchNullDataToMagento
                             if ($data_value['Type'] == 'pdf' || $data_value['Type'] == 'office') {
                                 $doc_detail[] = [
                                     "item_url" => $data_img_url,
+                                    "item_type" => $data_value['Type'],
                                     "altText" => $data_value['Alt_Text'],
+                                    "doc_name" => $data_value['Alt_Text'],
+									"asset_order" => $data_value['asset_order']
                                 ];
                                 $data_doc_data = [
                                     'sku' => $sku,
@@ -474,4 +482,28 @@ class FetchNullDataToMagento
         $storeId = $this->storeManagerInterface->getStore()->getId();
         return $storeId;
     }
+     /**
+     * Get Role Array
+     *
+     * @param array $widen_role_array
+     */
+    public function getRoleArray($widen_role_array)
+    {
+        if(in_array("ALL",$widen_role_array['image_roles'])){
+            $img_role = ["image","small_image","thumbnail"];
+        }
+        else if($widen_role_array['image_roles'] == "BASE"){
+            $img_role = ["image"];
+        }
+        else if($widen_role_array['image_roles'] == "SMALL"){
+            $img_role = ["small_image"];
+        }
+        else if($widen_role_array['image_roles'] == "THUMB"){
+            $img_role = ["thumbnail"];
+        }else{
+            $img_role = [];
+        }
+        return $img_role;
+    }
+
 }

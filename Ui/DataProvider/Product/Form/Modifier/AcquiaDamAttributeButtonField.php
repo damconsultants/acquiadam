@@ -26,6 +26,11 @@ class AcquiaDamAttributeButtonField extends AbstractModifier
      * @since 101.0.0
      */
     protected $arrayManager;
+    /**
+     * @var LayoutFactory
+     * @since 101.0.0
+     */
+    protected $layoutFactory;
 
     /**
      * @param LocatorInterface $locator

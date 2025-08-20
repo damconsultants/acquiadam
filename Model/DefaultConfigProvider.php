@@ -17,7 +17,7 @@ class DefaultConfigProvider
     /**
      * @var $scopeConfig
      */
-    protected $scopeConfig;
+    protected $_scopeConfig;
     /**
      * Get
      *

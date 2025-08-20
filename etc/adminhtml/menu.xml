@@ -68,6 +68,14 @@
            resource="DamConsultants_AcquiaDam::menu_item4"
            />
        <!-- END:   new node -->
+	   
+	   <!-- END:   new node -->
+	    <add id="DamConsultants_AcquiaDam::menu_item8"
+           title="Configuration Settings" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu"
+           resource="DamConsultants_AcquiaDam::menu_item6"
+           />
+       <add id="DamConsultants_AcquiaDam::settings" title="Configuration" module="DamConsultants_AcquiaDam" sortOrder="10" resource="Magento_Backend::content" parent="DamConsultants_AcquiaDam::menu_item8" action="adminhtml/system_config/edit/section/widenconfig"/>
       
    </menu>
 </config> 

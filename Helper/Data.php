@@ -395,7 +395,7 @@ class Data extends AbstractHelper
             "permentant_token" => $this->getPermanentToken()
         ];
         $param_data_json_value = json_encode($post_filed_array);
-        $request_url = self::API_CALLED . 'get-widen-categories';
+        $request_url = self::API_CALLED . 'get-widen-categories-five11';
         $jsonData = '{}';
         $this->_curl->setOption(CURLOPT_URL, $request_url);
         $this->_curl->setOption(CURLOPT_RETURNTRANSFER, true);
@@ -427,7 +427,7 @@ class Data extends AbstractHelper
             ]
         ];
         $param_data_json_value = json_encode($post_filed_array);
-        $request_url = self::API_CALLED . 'get-category-wise-data';
+        $request_url = self::API_CALLED . 'get-category-wise-data-five11';
         $jsonData = '{}';
         $this->_curl->setOption(CURLOPT_URL, $request_url);
         $this->_curl->setOption(CURLOPT_RETURNTRANSFER, true);
@@ -454,7 +454,7 @@ class Data extends AbstractHelper
         ];
 		
         $param_data_json_value = json_encode($post_filed_array);
-        $request_url = self::API_CALLED . 'get-attribute-defaultdata';
+        $request_url = self::API_CALLED . 'get-attribute-defaultdata-five11';
         $jsonData = '{}';
         $this->_curl->setOption(CURLOPT_URL, $request_url);
         $this->_curl->setOption(CURLOPT_RETURNTRANSFER, true);
@@ -484,7 +484,7 @@ class Data extends AbstractHelper
             ]
         ];
         $param_data_json_value = json_encode($post_filed_array);
-        $request_url = self::API_CALLED . 'get-attribute-data';
+        $request_url = self::API_CALLED . 'get-attribute-data-five11';
         $jsonData = '{}';
         $this->_curl->setOption(CURLOPT_URL, $request_url);
         $this->_curl->setOption(CURLOPT_RETURNTRANSFER, true);
@@ -551,7 +551,7 @@ class Data extends AbstractHelper
         ];
 
         $param_data_json_value = json_encode($post_filed_array);
-        $request_url = self::API_CALLED . 'get-widen-filter-details';
+        $request_url = self::API_CALLED . 'get-widen-filter-details-five11';
         $jsonData = '{}';
         
         $this->_curl->setOption(CURLOPT_URL, $request_url);

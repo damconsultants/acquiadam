@@ -128,7 +128,7 @@ class ImageFactory extends \Magento\Catalog\Block\Product\ImageFactory
     {
         $product_details = $this->productRepository->getById($product->getId());
         $acquiadamImage = $product_details->getWidenMultiImg();
-        $use_acquiadam_cdn = $product_details->getUseAcquiaDamCdn();
+        $use_acquiadam_cdn = $product_details->getUseWidenCdn();
         $label = "";
         if ($use_acquiadam_cdn == 1) {
             if ($acquiadamImage != "") {
@@ -193,7 +193,7 @@ class ImageFactory extends \Magento\Catalog\Block\Product\ImageFactory
         $image_url = "";
         $product_details = $this->productRepository->getById($product->getId());
         $acquiadamImage = $product_details->getWidenMultiImg();
-        $use_acquiadam_cdn = $product_details->getUseAcquiaDamCdn();
+        $use_acquiadam_cdn = $product_details->getUseWidenCdn();
         if ($use_acquiadam_cdn == 1) {
             if ($acquiadamImage != "") {
                 $json_value = json_decode($acquiadamImage, true);

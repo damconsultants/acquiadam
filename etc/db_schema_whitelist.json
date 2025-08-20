@@ -4,7 +4,7 @@
             "id": true,
             "property_name": true,
             "property_id": true,
-            "acquiadam_property_slug": true,
+            "widen_property_slug": true,
             "system_slug": true,
             "system_name": true
         },

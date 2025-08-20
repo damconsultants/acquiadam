@@ -9,7 +9,7 @@ class DeleteSyncData extends Action
     /**
      * @var AcquiaDamConfigSyncDataFactory
      */
-    public $AcquiaDamConfigSyncDataFactory;
+    public $acquiadamConfigSyncDataFactory;
     /**
      * Closed constructor.
      *

@@ -8,7 +8,7 @@ if (!empty($document_text)) {
     $html = "";
     if (!empty($document_array)) {
         foreach ($document_array as $doc) {
-            $html .= '<li><a target="_blank" href="' . $doc['item_url'] . '">' . $doc['doc_name'] . '</a></li>';
+            $html .= '<li><a target="_blank" rel="noopener noreferrer" href="' . $doc['item_url'] . '">' . $doc['doc_name'] . '</a></li>';
         }
     }
     ?>

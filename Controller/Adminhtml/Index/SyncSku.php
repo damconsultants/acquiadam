@@ -209,7 +209,7 @@ class SyncSku extends \Magento\Backend\App\Action
                             $sku,
                             $extra_details
                         );
-                    } catch (Exception $e) {
+                    } catch (\Exception $e) {
                         $insert_data = [
                             "sku" => $sku,
                             "message" => $e->getMessage(),
@@ -334,6 +334,7 @@ class SyncSku extends \Magento\Backend\App\Action
                                         "selected_template_url" => $item_url[0],
                                         "height" => $height,
                                         "width"=> $width,
+										"asset_order" => $data_value['asset_order'],
                                         "is_import" => "0"
                                     ];
                                 } else {
@@ -344,8 +345,9 @@ class SyncSku extends \Magento\Backend\App\Action
                                         "item_type" => $data_value['Type'],
                                         "thum_url" => $item_url[0],
                                         "selected_template_url" => $item_url[0],
-                                        "height" => "",
-                                        "width"=> "",
+                                        "height" => $height,
+                                        "width"=> $width,
+										"asset_order" => $data_value['asset_order'],
                                         "is_import" => "0"
                                     ];
                                 }
@@ -374,6 +376,7 @@ class SyncSku extends \Magento\Backend\App\Action
                                     "selected_template_url" => $img['selected_template_url'],
                                     "height" => $img['height'],
                                     "width"=> $img['width'],
+									"asset_order" => $image_detail[$key1]['asset_order'],
                                     "is_import" => $img['is_import']
                                 ];
                             }
@@ -477,8 +480,9 @@ class SyncSku extends \Magento\Backend\App\Action
                                 "item_type" => $data_value['Type'],
                                 "thum_url" => $item_url[0],
                                 "selected_template_url" => $item_url[0],
-                                "height" => $width,
-                                "width"=> $height,
+                                "height" => $height,
+                                "width"=> $width,
+								"asset_order" => $data_value['asset_order'],
                                 "is_import" => "0"
                             ];
                             $data_image_data = [
@@ -550,10 +554,11 @@ class SyncSku extends \Magento\Backend\App\Action
                                         "selected_template_url" => $img_array['template_url'],
                                         "height" => "",
                                         "width"=> "",
+                                        "asset_order" => $data_value['asset_order'],
                                         "is_import" => "0"
                                     ];
                                     $data_video_data = [
-                                        'sku' => $product_sku_key,
+                                        'sku' => $sku,
                                         'message' => $data_img_url,
                                         'data_type' => '3',
                                         "lable" => "1"
@@ -609,10 +614,11 @@ class SyncSku extends \Magento\Backend\App\Action
                                 "selected_template_url" => $data_img_url,
                                 "height" => "",
                                 "width"=> "",
+								"asset_order" => $data_value['asset_order'],
                                 "is_import" => "0"
                             ];
                             $data_video_data = [
-                                'sku' => $product_sku_key,
+                                'sku' => $sku,
                                 'message' => $data_img_url,
                                 'data_type' => '3',
                                 "lable" => "1"
@@ -661,9 +667,11 @@ class SyncSku extends \Magento\Backend\App\Action
                                 "item_type" => $data_value['Type'],
                                 "altText" => $data_value['Alt_Text'],
                                 "doc_name" => $data_value['Alt_Text'],
+								"asset_order" => $data_value['asset_order'],
+								
                             ];
                             $data_doc_data = [
-                                'sku' => $product_sku_key,
+                                'sku' => $sku,
                                 'message' => $data_doc_url,
                                 'data_type' => '2',
                                 "lable" => "1"
@@ -695,10 +703,11 @@ class SyncSku extends \Magento\Backend\App\Action
                                     "item_type" => $all_new_urls['Type'],
                                     "altText" => $all_new_urls['Alt_Text'],
                                     "doc_name" => $all_new_urls['Alt_Text'],
+									"asset_order" => $all_new_urls['asset_order'],
                                 ];
                                 $data_doc_data = [
-                                    'sku' => $new_link,
-                                    'message' => $new_value_array,
+                                    'sku' => $sku,
+                                    'message' => $new_link,
                                     'data_type' => '2',
                                     "lable" => "1"
                                 ];
@@ -822,7 +831,7 @@ class SyncSku extends \Magento\Backend\App\Action
     public function getRoleArray($widen_role_array)
     {
         if(in_array("ALL",$widen_role_array['image_roles'])){
-            $img_role = ["image","small_image","thumbnail","swatch_image"];
+            $img_role = ["image","small_image","thumbnail"];
         }
         else if($widen_role_array['image_roles'] == "BASE"){
             $img_role = ["image"];

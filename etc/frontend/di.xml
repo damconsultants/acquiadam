@@ -5,7 +5,7 @@
     <type name="Magento\Checkout\CustomerData\AbstractItem">
         <plugin name="Change_Product_Image_In_Minicart" type="DamConsultants\AcquiaDam\Plugin\Minicart\Image" sortOrder="1"/>
     </type>
-    <type name="Magento\Checkout\Model\DefaultConfigProvider">
+    <!--<type name="Magento\Checkout\Model\DefaultConfigProvider">
         <plugin name="default_config_provider" type="DamConsultants\AcquiaDam\Model\DefaultConfigProvider"/>
-    </type>
+    </type>-->
 </config>

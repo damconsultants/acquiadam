@@ -1,16 +1,6 @@
 @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;500;600;700;800&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap");
-/* ====================
-1.	Reset
-====================== */
 
-* {
-    margin: 0;
-    padding: 0;
-    border: none;
-    outline: none;
-    line-height: inherit;
-}
 /* =========================
 2.	Global Settings
 ============================= */
@@ -65,10 +55,6 @@ button {
     font-family: var(--thm-font);
 }
 
-textarea {
-    overflow: hidden;
-    resize: none;
-}
 
 button {
     outline: none !important;
@@ -815,7 +801,7 @@ img {
     font-weight: 400;
     height: 40px;
     line-height: 1.36;
-    padding: -3.4rem 1rem 0.6rem;
+    padding: 2px 4px;
     transition: border-color .1s linear;
     vertical-align: baseline;
     width: 100%;

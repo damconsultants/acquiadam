@@ -31,9 +31,9 @@ foreach ($MagentoImageRoll as $attribute) {
     <div class="add-video-button-container">
         <button type="button" name="external_image_acquiadam"
         id="external_image_acquiadam">Acquia DAM Image</button>
-        <button type="button" name="import_image_acquiadam"
+        <!--<button type="button" name="import_image_acquiadam"
         id="import_image_acquiadam" class="action-secondary"
-        style="float:left;">Import Image</button>
+        style="float:left;">Import Image</button>-->
     </div>
 </div>
 <table class="dynamic-rows-acquiadam" id="sortable-acquiadam">
@@ -85,6 +85,7 @@ foreach ($MagentoImageRoll as $attribute) {
     var docInnerLoader = jQuery("#docInnerLoader");
     var flag = 0;
     var selectAllValue = "";
+    var biggest_order = 0;
    
     
     jQuery(document).on('click', '.widen_url button', function () {
@@ -120,14 +121,20 @@ foreach ($MagentoImageRoll as $attribute) {
         var selected_images = JSON.parse(old_selected_images);
         var item_length = selected_images.length;
         var content = '';
+		selected_images.sort(function(a, b) {
+             return Number(a.asset_order) - Number(b.asset_order);
+        });
+        console.log(selected_images);
         jQuery.each(selected_images, function (i, img_data) {
             console.log(img_data);
             var selected_role = img_data.image_role;
             var select_item_type = img_data.item_type;
             var old_img_altText = img_data.altText;
-
+			var asset_order = img_data.asset_order
             var check_is_imported = img_data.is_import;
-
+            if(asset_order > biggest_order){
+                biggest_order = asset_order;
+            }
             var selected_old_template_url = img_data.selected_template_url;
             var selected_height = img_data.height;
             if(typeof selected_height == "undefined"){
@@ -149,6 +156,7 @@ foreach ($MagentoImageRoll as $attribute) {
             content += '<td><input class="url widen_selected_images" type="text"' +
                 'data-selectedTemplateUrl="'+ selected_old_template_url +'"' +
                 'data-isimport="'+check_is_imported+'"' +
+				'data-isorder="'+asset_order+'"'+
                 'data-index="' + i + '" id="textboxId_' + i + '" data-imgType="' + select_item_type + '"' +
                 'data-thumUrl="' + item_thum_url + '" value="' + original_item_url + '" />'
             content += '</td>'
@@ -237,10 +245,16 @@ foreach ($MagentoImageRoll as $attribute) {
                             var selected_img_details = [];
                             jQuery(".image-checkbox").each(function (index) {
                                 if ($(this).is(":checked")) {
+									console.log("data",$(this).val())
                                     var selected_media_id = $(this).val();
                                     var selected_data_id = $(this).attr('data-id');
                                     var template_url = $(this).attr('data-templateurl');
                                     var assets_type = $(this).attr('data-assetstype');
+                                    var selected_asset_order = $(this).attr("data-assetsoder");
+                                    if(selected_asset_order == 0){
+                                        selected_asset_order = biggest_order + 1;
+                                        biggest_order = selected_asset_order;
+                                    }
                                     $(".image_input_box_" + selected_data_id).each(function () {
                                         if ($(this).is(":checked")) {
                                             var selected_img_url = $(this).attr("data-image");
@@ -254,9 +268,10 @@ foreach ($MagentoImageRoll as $attribute) {
                                                 "b_img_role" : selected_image_role,
                                                 "b_thum_url" : selected_img_url,
                                                 "b_img_alttext": selected_altText,
-                                                "b_template_url": template_url
+                                                "b_template_url": template_url,
+                                                "b_asset_order" : selected_asset_order
                                             };
-                                            
+                                            console.log("data_item", b_img_data);
                                             selected_img_details.push(b_img_data);
                                         }
                                     });
@@ -276,6 +291,7 @@ foreach ($MagentoImageRoll as $attribute) {
                 
             });
     function add_widen_gallery_item(data_item,img_alttext_details_val) {
+		console.log("data_item", data_item);
         var old_selected_length = jQuery('.tbody_dynamic-acquiadam tr').length;
         let item_length = data_item.length;
         var ii = 0;
@@ -290,10 +306,8 @@ foreach ($MagentoImageRoll as $attribute) {
             var input_field_val = data_item.shift();
             var item_v_url = input_field_val.b_item_url;
             var select_item_type = input_field_val.b_img_type;
-            var item_thum_url = input_field_val.b_thum_url;
             var item_alt_text = input_field_val.b_img_alttext;
-
-            var selected_template_url = input_field_val.b_template_url;
+            var item_asset_order = input_field_val.b_asset_order;
 
             var selected_role = input_field_val.b_img_role;
             var selected_role_array = [];
@@ -301,6 +315,21 @@ foreach ($MagentoImageRoll as $attribute) {
                 selected_role_array = selected_role.split(",");
             }
             var item_val = item_v_url.split('?');
+			var queryString = item_val[1];
+
+			var urlParams = new URLSearchParams(queryString);
+
+			var width = urlParams.get("w");
+			var height = urlParams.get("h");
+			var item_thum_url = item_val[0];
+			var selected_template_url = "";
+
+			if (!input_field_val.b_template_url) {
+				selected_template_url = item_val[0];
+			} else {
+				selected_template_url = input_field_val.b_template_url;
+			}
+
             content = '<tr style="background: #efefef;" data-index="' + ii + '"><td>'
             content += '<img src ="' + drag_img + '"/></td>'
             content += '<td><input class="url widen_selected_images"' +
@@ -308,6 +337,7 @@ foreach ($MagentoImageRoll as $attribute) {
                 'data-imgType="'+select_item_type+'"'+
                 'data-thumUrl="' + item_thum_url + '"' +
                 'data-isimport="0"' +
+                'data-isorder="'+item_asset_order+'"'+
                 'data-selectedTemplateUrl="'+ selected_template_url +'"' +
                 'id="textboxId_' + ii + '"' +
                 'value="' + item_val[0] + '" />'
@@ -333,9 +363,9 @@ foreach ($MagentoImageRoll as $attribute) {
                 content += '<td><img src ="' + item_val[0] + '" id="image_' + ii + '" height="100" width="100" /></td>'
 
                 content += '<td><input class="url widen_height widen_selected_images_height_'+ii+'" type="text"' +
-                'data-index="' + ii + '" value="" />'
+                'data-index="' + ii + '" value="' + height + '" />'
                 content += '<td><input class="url widen_width widen_selected_images_width_'+ii+'" type="text"' +
-                'data-index="' + ii + '" value="" />'
+                'data-index="' + ii + '" value="' + width + '" />'
 
                 }else{
                     content += '<td><video width="100" height="100" controls>'+
@@ -367,7 +397,7 @@ foreach ($MagentoImageRoll as $attribute) {
             var item_index = jQuery(this).attr("data-index");
             var item_img_type = jQuery(this).attr("data-imgType");
 
-            var is_imported = jQuery(this).attr("data-isimport");
+            var is_imported = jQuery(this).attr("data-isimport");            
             var item_thum_url = jQuery(this).attr("data-thumUrl");
             var selected_templateUrl = jQuery(this).attr("data-selectedTemplateUrl");
 
@@ -377,6 +407,8 @@ foreach ($MagentoImageRoll as $attribute) {
             var image_height = jQuery('.widen_selected_images_height_' + item_index).val();
             var image_width = jQuery('.widen_selected_images_width_' + item_index).val();
             
+            var is_order = jQuery(this).attr("data-isorder");
+            is_order = parseInt(is_order);
             var new_img_val = getAllUrlParams(select_img).download;
             var new_selected_url = select_img;
             if(typeof new_img_val != "undefined"){
@@ -392,8 +424,10 @@ foreach ($MagentoImageRoll as $attribute) {
                 "selected_template_url": selected_templateUrl,
                 "height" :image_height,
                 "width":image_width,
-                "is_import" : is_imported
+                "is_import" : is_imported,
+                "asset_order": is_order
             };
+
             all_selected_images.push(images_details);
         });
         if (all_selected_images.length > 0) {

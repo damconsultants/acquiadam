@@ -255,6 +255,7 @@ class AutoAddFromMagento
                     foreach ($get_data as $data_value) {
                         if ($data_value['Type'] == 'image') {
                             $image_url_new = $data_value["Image_Url"];
+                            $img_role = $this->getRoleArray($data_value);
                             $width = '';
                             $height = '';
                             $parsedUrl = \parse_url($image_url_new);
@@ -268,24 +269,26 @@ class AutoAddFromMagento
                                 $diff_image_detail[] = [
                                     "item_url" => $item_url[0],
                                     "altText" => $data_value['Alt_Text'],
-                                    "image_role" => $data_value['image_roles'],
+                                    "image_role" => $img_role,
                                     "item_type" => $data_value['Type'],
                                     "thum_url" => $item_url[0],
                                     "selected_template_url" => $item_url[0],
                                     "height" => $height,
                                     "width"=> $width,
+                                    "asset_order" => $data_value['asset_order'],
                                     "is_import" => "0"
                                 ];
                             } else {
                                 $image_detail[] = [
                                     "item_url" => $item_url[0],
                                     "altText" => $data_value['Alt_Text'],
-                                    "image_role" => $data_value['image_roles'],
+                                    "image_role" => $img_role,
                                     "item_type" => $data_value['Type'],
                                     "thum_url" => $image_url_new,
                                     "selected_template_url" => $image_url_new,
                                     "height" => $height,
                                     "width"=> $width,
+                                    "asset_order" => $data_value['asset_order'],
                                     "is_import" => "0"
                                 ];
                             }
@@ -311,6 +314,7 @@ class AutoAddFromMagento
                                 "selected_template_url" => $img['selected_template_url'],
                                 "height" => $img['height'],
                                 "width"=> $img['width'],
+                                "asset_order" => $image_detail[$item_key]['asset_order'],
                                 "is_import" => $img['is_import']
                             ];
                         }
@@ -421,5 +425,28 @@ class AutoAddFromMagento
             $flag = 3;
         }
         return $flag;
+    }
+      /**
+     * Get Role Array
+     *
+     * @param array $widen_role_array
+     */
+    public function getRoleArray($widen_role_array)
+    {
+        if(in_array("ALL",$widen_role_array['image_roles'])){
+            $img_role = ["image","small_image","thumbnail"];
+        }
+        else if($widen_role_array['image_roles'] == "BASE"){
+            $img_role = ["image"];
+        }
+        else if($widen_role_array['image_roles'] == "SMALL"){
+            $img_role = ["small_image"];
+        }
+        else if($widen_role_array['image_roles'] == "THUMB"){
+            $img_role = ["thumbnail"];
+        }else{
+            $img_role = [];
+        }
+        return $img_role;
     }
 }

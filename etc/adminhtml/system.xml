@@ -10,6 +10,10 @@
             <resource>DamConsultants_AcquiaDam::config</resource>
             <group id="basic_credential" translate="label" type="text" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
                 <label>Acquia DAM Credential</label>
+				<field id="version_check" translate="label" type="label" sortOrder="1" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label></label>
+                    <frontend_model>DamConsultants\AcquiaDam\Block\Adminhtml\System\Config\VersionCheck</frontend_model>
+                </field>
                 <field id="widen_domain" translate="label" type="text" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Acquia DAM Domain</label>
                     <comment>Enter your Acquia DAM Domain Name Here Without https://.</comment>

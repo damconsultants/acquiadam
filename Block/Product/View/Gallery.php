@@ -54,7 +54,7 @@ class Gallery extends \Magento\Catalog\Block\Product\View\Gallery
     /**
      * @var \Magento\Framework\App\Request\Http
      */
-    public $request;
+    public $_request;
     /**
      * @var storeManager
      */
@@ -171,6 +171,7 @@ class Gallery extends \Magento\Catalog\Block\Product\View\Gallery
         $magento_img = $this->getGalleryImages();
         $magento_config = $this->getGalleryImagesConfig()->getItems();
         if ($use_acquiadam_both_image == 1) { /*Both Image*/
+			$json_value = json_decode($acquiadam_image, true);
             foreach ($magento_img as $image) {
                 $imageItem = new DataObject([
                     'thumb' => $image->getData('small_image_url'),
@@ -192,6 +193,9 @@ class Gallery extends \Magento\Catalog\Block\Product\View\Gallery
             }
             if (!empty($acquiadam_image)) {
                 $json_value = json_decode($acquiadam_image, true);
+				usort($json_value, function ($a, $b) {
+                    return $a['asset_order'] <=> $b['asset_order'];
+                });
                 foreach ($json_value as $key => $values) {
                     $thum_image_values = trim($values['thum_url']);
 
@@ -232,9 +236,11 @@ class Gallery extends \Magento\Catalog\Block\Product\View\Gallery
             if (!empty($acquiadam_image)) {
                 $json_value = json_decode($acquiadam_image, true);
                 $role_image = 0;
+				usort($json_value, function ($a, $b) {
+					return $a['asset_order'] <=> $b['asset_order'];
+				});
                 foreach ($json_value as $key => $values) {
                     $thum_image_values = trim($values['thum_url']);
-
                     if ($values["item_type"] == "video") {
                         $image_values = trim($values['item_url']);
                     } else {
@@ -257,7 +263,7 @@ class Gallery extends \Magento\Catalog\Block\Product\View\Gallery
                         'img' => ($values['item_type'] == 'image') ? $image_values : $thum_image_values,
                         'full' => ($values['item_type'] == 'image') ? $image_values : $thum_image_values,
                         'caption' => $this->getProduct()->getName(),
-                        'position' => $key + 1,
+                        'position' => $values['asset_order'],
                         'isMain' =>$role_image,
                         'type' => ($values['item_type'] == 'image') ? 'image' : 'video',
                         'videoUrl' => ($values['item_type'] == 'video') ? $image_values : null,

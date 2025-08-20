@@ -48,6 +48,10 @@ class ImportImage extends \Magento\Backend\App\Action
      */
     protected $cookieMetadataFactory;
     /**
+     * @var string $logger;
+     */
+    protected $logger;
+    /**
      * Import Image.
      *
      * @param \Magento\Backend\App\Action\Context $context

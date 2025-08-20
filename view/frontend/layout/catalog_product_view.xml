@@ -7,7 +7,7 @@
             </action>
         </referenceBlock>
        <referenceBlock name="product.info.details">
-           <block class="Magento\Catalog\Block\Product\View" name="custom.tab" template="DamConsultants_AcquiaDam::product/view/acquiadamdoc_tab.phtml" group="detailed_info" >
+           <block class="Magento\Catalog\Block\Product\View" name="custom.tab" template="DamConsultants_AcquiaDam::product/view/widendoc_tab.phtml" group="detailed_info" >
                <arguments>
                    <argument translate="true" name="title" xsi:type="string">Document</argument>
                    <argument name="sort_order" xsi:type="string">100</argument>

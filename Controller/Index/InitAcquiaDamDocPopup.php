@@ -122,12 +122,12 @@ class InitAcquiaDamDocPopup extends \Magento\Framework\App\Action\Action
                     'id' => $collection_value['id'],
                     'property_name' => $collection_value['property_name'],
                     'property_id' => $collection_value['property_id'],
-                    'acquiadam_property_slug' => $collection_value['acquiadam_property_slug'],
+                    'widen_property_slug' => $collection_value['widen_property_slug'],
                     'system_slug' => $collection_value['system_slug'],
                     'system_name' => $collection_value['system_name'],
                 ];
                 $collection_data_slug_val[$collection_value['system_slug']] = [
-                    'acquiadam_property_slug' => $collection_value['acquiadam_property_slug'],
+                    'widen_property_slug' => $collection_value['widen_property_slug'],
                 ];
             }
         }
