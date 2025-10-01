@@ -11,6 +11,29 @@
 
         var checkbox_checked = 0;
         var sku_limit = 0;
+		var checkbox_checked = 0;
+        var sku_limit = 0;
+        $("#bt_id_3").hide();
+        $('input[type="checkbox"]').change(function () {
+            if ($(this).is(':checked')) {
+                $("#row_widensyncdata_widen_sync_data_sku_limit").hide();
+                checkbox_checked = 1;
+
+                // Check if the button already exists to avoid duplication
+
+                $("#bt_id_3").show();
+
+                $("#sync_sku_button").hide();
+            } else {
+                $("#row_widensyncdata_widen_sync_data_sku_limit").show();
+                checkbox_checked = 0;
+                $("#bt_id_3").hide();
+
+                $("#sync_sku_button").show();
+
+                // Remove the button when unchecked
+            }
+        });
         $('#widensyncdata_widen_sync_data_check_for_all_checkbox').change(function () {
             if ($(this).is(':checked')) {
                 $("#row_widensyncdata_widen_sync_data_sku_limit").hide();

@@ -131,114 +131,98 @@ class SyncSku extends \Magento\Backend\App\Action
      * @return $this
      */
     public function execute()
-    {
+	{
+		if (!$this->getRequest()->isAjax()) {
+			return $this->_forward('noroute');
+		}
 
-        if (!$this->getRequest()->isAjax()) {
-            $this->_forward('noroute');
-            return;
-        }
+		$result = $this->resultJsonFactory->create();
 
-        $extra_details = [];
-        $property_id = null;
-        $productSku = [];
-        $product_sku = $this->getRequest()->getParam('product_sku');
-        $select_attribute = $this->getRequest()->getParam('select_attribute');
+		$productSkus   = array_filter(explode(",", (string)$this->getRequest()->getParam('product_sku')));
+		$selectAttr    = $this->getRequest()->getParam('select_attribute');
+		$extraDetails  = [
+			"is_widen_cdn" => $this->getRequest()->getParam('is_widen_cdn'),
+			"is_mg_import" => $this->getRequest()->getParam('is_magento_import')
+		];
 
-        $is_widen_cdn = $this->getRequest()->getParam('is_widen_cdn');
-        $is_mg_import = $this->getRequest()->getParam('is_magento_import');
-        $extra_details = [
-            "is_widen_cdn" => $is_widen_cdn,
-            "is_mg_import" => $is_mg_import
-        ];
-        $result = $this->resultJsonFactory->create();
-        $productSku = explode(",", $product_sku);
-        $collection = $this->metaPropertyCollectionFactory->create();
-        $properties_details = [];
-        $all_properties_slug = [];
-        if (count($collection->getData()) > 0) {
-                
-            foreach ($collection->getData() as $metacollection) {
-                $properties_details[$metacollection['system_slug']] = [
-                    "id" => $metacollection['id'],
-                    "property_name" => $metacollection['property_name'],
-                    "property_id" => $metacollection['property_id'],
-                    "widen_property_slug" => $metacollection['widen_property_slug'],
-                    "system_slug" => $metacollection['system_slug'],
-                    "system_name" => $metacollection['system_name'],
-                ];
-            }
-            $all_properties_slug = array_keys($properties_details);
+		// 🔹 Fetch meta property collection
+		$collection = $this->metaPropertyCollectionFactory->create();
+		$properties = $collection->getData();
 
-        } else {
-            $result_data = $result->setData(
-                ['status' => 0, 'message' => 'Please Select The Metaproperty First.....']
-            );
-            return $result_data;
-        }
-		$color_style = [];
-        if (strlen($product_sku) > 0) {
-            $productSku = explode(",", $product_sku);
-            foreach ($productSku as $sku) {
+		if (empty($properties)) {
+			return $result->setData(['status' => 0, 'message' => 'Please Select The Metaproperty First.....']);
+		}
+
+		// 🔹 Build property details
+		$propertiesDetails = [];
+		foreach ($properties as $meta) {
+			$propertiesDetails[$meta['system_slug']] = [
+				"id"                 => $meta['id'],
+				"property_name"      => $meta['property_name'],
+				"property_id"        => $meta['property_id'],
+				"widen_property_slug"=> $meta['widen_property_slug'],
+				"system_slug"        => $meta['system_slug'],
+				"system_name"        => $meta['system_name'],
+			];
+		}
+		$allSlugs = array_keys($propertiesDetails);
+
+		if (empty($productSkus)) {
+			return $result->setData(['status' => 0, 'message' => 'Please enter at least one SKU.']);
+		}
+
+		// 🔹 Loop SKUs
+		foreach ($productSkus as $sku) {
+			try {
+				$_product = $this->_productRepository->get($sku);
+			} catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
+				$this->logSyncError($sku, "SKU not found in products");
+				continue;
+			}
+
+			// Prepare style/color data
+			$colorStyle = [];
+			if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
+				$colorStyle = [
+					"color_number" => $_product->getAttributeText('color'),
+					"style_number" => $_product->getStyle()
+				];
+			}
+
+			// Call API
+			$response = $this->_helperData->getAcquiaDamImageSyncWithProperties($colorStyle, $propertiesDetails);
+			$decoded  = json_decode($response, true);
+			$data     = $decoded['data'] ?? [];
+			if (!empty($data)) {
 				try {
-					$_product = $this->_productRepository->get($sku);
-				} catch (\Magento\Framework\Exception\NoSuchEntityException $e) {
-					$insert_data = [
-                        "sku" => $sku,
-                        "message" => "Sku not match in products",
-                        "data_type" => "",
-                        "lable" => "0"
-                    ];
-                    $this->getInsertDataTable($insert_data);
-					continue;
+					$this->getDataItem($selectAttr, $data, $allSlugs, $sku, $extraDetails);
+				} catch (\Exception $e) {
+					$this->logSyncError($sku, $e->getMessage());
 				}
-				if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
-                    $color_style = [
-                        "color_number" =>  $_product->getAttributeText('color'),
-                        "style_number" =>  $_product->getStyle()
-                    ];	
-				}
-                $get_data =  $this->_helperData->getAcquiaDamImageSyncWithProperties($color_style, $properties_details);
-                $get_data_json_decode = json_decode($get_data, true);
-                $fetch_details = $get_data_json_decode['data'];
-                if (count($fetch_details) > 0) {
-                    try {
-                        $this->getDataItem(
-                            $select_attribute,
-                            $fetch_details,
-                            $all_properties_slug,
-                            $sku,
-                            $extra_details
-                        );
-                    } catch (\Exception $e) {
-                        $insert_data = [
-                            "sku" => $sku,
-                            "message" => $e->getMessage(),
-                            "data_type" => "",
-                            "lable" => "0"
-                        ];
-                        $this->getInsertDataTable($insert_data);
-                    }
-                } else {
-                    $insert_data = [
-                        "sku" => $sku,
-                        "message" => "Something went wrong from API side, Please contact to support team!",
-                        "data_type" => "",
-                        "lable" => "0"
-                    ];
-                    $this->getInsertDataTable($insert_data);
-                }
+			} else {
+				$this->logSyncError($sku, "Something went wrong from API side, Please contact support!");
+			}
+		}
 
-            };
-            $result_data = $result->setData([
-                'status' => 1,
-                'message' => 'Data Sync Successfully.Please check AcquiaDam Synchronization Log.!'
-            ]);
-            return $result_data;
-        } else {
-            $result_data = $result->setData(['status' => 0, 'message' => 'Please enter atleast one SKU.']);
-            return $result_data;
-        }
-    }
+		return $result->setData([
+			'status'  => 1,
+			'message' => 'Data Sync Successfully. Please check AcquiaDam Synchronization Log.!'
+		]);
+	}
+
+	/**
+	 * Helper to insert error logs.
+	 */
+	private function logSyncError(string $sku, string $message): void
+	{
+		$this->getInsertDataTable([
+			"sku"     => $sku,
+			"message" => $message,
+			"data_type" => "",
+			"lable"   => "0"
+		]);
+	}
+
     /**
      * Is Json
      *
@@ -277,457 +261,263 @@ class SyncSku extends \Magento\Backend\App\Action
      * @param array $extra_details
      */
     public function getDataItem($select_attribute, $get_data, $all_properties_slug, $sku, $extra_details)
-    {
-        $extra_values = $extra_details;
-        $image_detail = [];
-        $all_item_url = [];
-        $video_detail = [];
-        $type = [];
-        $diff_image_detail = [];
-        $result = $this->resultJsonFactory->create();
-        $_product = $this->_productRepository->get($sku);
+	{
+		$_product    = $this->_productRepository->get($sku);
+		$storeId     = $this->storeManagerInterface->getStore()->getId();
+		$productId   = $_product->getId();
+		$imageValue  = $_product->getWidenMultiImg();
+		$docValue    = $_product->getWidenDocument();
+		$mediaUrl    = $this->storeManagerInterface->getStore()->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA);
 
-        $currentStore = $this->storeManagerInterface->getStore();
-        $mediaUrl = $currentStore->getBaseUrl(\Magento\Framework\UrlInterface::URL_TYPE_MEDIA);
+		if (empty($get_data)) {
+			return;
+		}
 
-        $storeId = $this->storeManagerInterface->getStore()->getId();
-        $product_ids = $_product->getId();
-        $image_value = $_product->getWidenMultiImg();
-        $doc_value = $_product->getWidenDocument();
-        if (!empty($get_data)) {
-            if ($select_attribute == 'image') {
-                if (!empty($image_value)) {
-                    $item_old_value = json_decode($image_value, true);
-                    if (count($item_old_value) > 0) {
-                        foreach ($item_old_value as $img) {
-                            /*** Code by Jayendra ******/
-                            if ($img['item_type'] == 'image') {
-                                $item_img_url = $this->getPerfectVideoUrl($img['item_url']);
-                                $all_item_url[] = $item_img_url;
-                            }
-                            /************************* */
-                        }
-                        
-                        foreach ($get_data as $data_value) {
-                            if ($data_value['Type'] == 'image') {
-                                $image_url_new = $this->getPerfectVideoUrl($data_value["Image_Url"]);
-                                $width = '';
-                                $height = '';
-                                //$widen_role_array = $data_value['image_roles'];
-                                $img_role = $this->getRoleArray($data_value);
-                                
-                                $parsedUrl = \parse_url($image_url_new);
-                                $item_url = explode("?", $image_url_new);
-                                if (isset($parsedUrl['query'])) {
-                                    \parse_str($parsedUrl['query'], $queryParams);
-                                    $width = isset($queryParams['w']) ? $queryParams['w'] : '';
-                                    $height = isset($queryParams['h']) ? $queryParams['h'] : '';
-                                }
-                                
-                                if (!in_array($item_url[0], $all_item_url)) {
-                                    $diff_image_detail[] = [
-                                        "item_url" => $item_url[0],
-                                        "altText" => $data_value['Alt_Text'],
-                                        "image_role" => $img_role,
-                                        "item_type" => $data_value['Type'],
-                                        "thum_url" => $item_url[0],
-                                        "selected_template_url" => $item_url[0],
-                                        "height" => $height,
-                                        "width"=> $width,
-										"asset_order" => $data_value['asset_order'],
-                                        "is_import" => "0"
-                                    ];
-                                } else {
-                                    $image_detail[] = [
-                                        "item_url" => $item_url[0],
-                                        "altText" => $data_value['Alt_Text'],
-                                        "image_role" => $img_role,
-                                        "item_type" => $data_value['Type'],
-                                        "thum_url" => $item_url[0],
-                                        "selected_template_url" => $item_url[0],
-                                        "height" => $height,
-                                        "width"=> $width,
-										"asset_order" => $data_value['asset_order'],
-                                        "is_import" => "0"
-                                    ];
-                                }
-                            }
-                        }
-                        $image = [];
-                        if (count($image_detail) > 0) {
-                            foreach ($image_detail as $img) {
-                                $image[] = $img['item_url'];
-                            }
-                        }
-                        $new_image_detail = [];
-                        $item_img_url = "";
-                        foreach ($item_old_value as $key1 => $img) {
-                            if ($img['item_type'] == 'image') {
-                                $item_img_url = $img['item_url'];
-                            }
-                            if (in_array($item_img_url, $image)) {
-                                $item_key = array_search($img['item_url'], array_column($image_detail, "item_url"));
-                                $new_image_detail[] = [
-                                    "item_url" => $item_img_url,
-                                    "altText" => $image_detail[$key1]['altText'],
-                                    "image_role" => $image_detail[$key1]['image_role'],
-                                    "item_type" => $img['item_type'],
-                                    "thum_url" => $img['thum_url'],
-                                    "selected_template_url" => $img['selected_template_url'],
-                                    "height" => $img['height'],
-                                    "width"=> $img['width'],
-									"asset_order" => $image_detail[$key1]['asset_order'],
-                                    "is_import" => $img['is_import']
-                                ];
-                            }
-                        }
-                        $array_merge = array_merge($new_image_detail, $diff_image_detail);
-                        $images = [];
-                        if (count($diff_image_detail) > 0) {
-                            foreach ($diff_image_detail as $diff_image) {
-                                $images[] = $diff_image['item_url'];
-                                $data_image_data = [
-                                    'sku' => $sku,
-                                    'message' => $diff_image['item_url'],
-                                    'data_type' => '1',
-                                    "lable" => "1"
-                                ];
-                                $this->getInsertDataTable($data_image_data);
-                            }
-                        }
-                        
-                        foreach ($array_merge as $merge) {
-                            $type[] = $merge['item_type'];
-                        }
-                        $new_value_array = json_encode($array_merge, true);
-                        
-                        $flag = $this->getFlag($type);
-                        if (isset($extra_details['is_mg_import']) && $extra_values['is_mg_import'] == 1) {
-                            $new_value_array = $this->uploadImageToProduct($new_value_array, $product_ids);
-                        }
-                        
-                        if (isset($extra_values['is_widen_cdn']) && $extra_values['is_widen_cdn'] == 1) {
-                            $update_details = [
-                                'widen_multi_img' => $new_value_array
-                            ];
-                        } else {
-                            $update_details = [
-                                'widen_multi_img' => $new_value_array,
-                            ];
-                        }
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            $update_details,
-                            $storeId
-                        );
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            ['widen_isMain' => $flag],
-                            $storeId
-                        );
-                        $updated_values = [
-                            'widen_auto_replace' => 1
-                        ];
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            $updated_values,
-                            $storeId
-                        );
-                    } else {
-                        if (isset($extra_values['is_widen_cdn']) && $extra_values['is_widen_cdn'] == 1) {
-                            $update_details = [
-                                'use_widen_cdn' => 1
-                            ];
-                        } else {
-                            $update_details = [
-                                'use_widen_cdn' => 0
-                            ];
-                        }
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            $update_details,
-                            $storeId
-                        );
-                        $data_image_data = [
-                            'sku' => $sku,
-                            'message' => "Don't Have Find New Data For this SKU",
-                            'data_type' => '',
-                            "lable" => ""
-                        ];
-                        $this->getInsertDataTable($data_image_data);
-                    }
-                } else {
-                    foreach ($get_data as $data_value) {
-                        if ($data_value['Type'] == 'image') {
-                            $image_url_new = $this->getPerfectVideoUrl($data_value["Image_Url"]);
-                            $width = '';
-                            $height = '';
+		switch ($select_attribute) {
+			case 'image':
+				$this->processImages($sku, $productId, $storeId, $imageValue, $get_data, $extra_details);
+				break;
 
-                            //$widen_role_array = $data_value['image_roles'];
-                            $img_role = $this->getRoleArray($data_value);
+			case 'video':
+				$this->processVideos($sku, $productId, $storeId, $imageValue, $get_data, $extra_details, $mediaUrl);
+				break;
 
-                            $parsedUrl = \parse_url($image_url_new);
-                            $item_url = explode("?", $image_url_new);
-                            if (isset($parsedUrl['query'])) {
-                                \parse_str($parsedUrl['query'], $queryParams);
-                                $width = isset($queryParams['w']) ? $queryParams['w'] : '';
-                                $height = isset($queryParams['h']) ? $queryParams['h'] : '';
-                            }
-                            $image_detail[] = [
-                                "item_url" => $item_url[0],
-                                "altText" => $data_value['Alt_Text'],
-                                "image_role" => $img_role,
-                                "item_type" => $data_value['Type'],
-                                "thum_url" => $item_url[0],
-                                "selected_template_url" => $item_url[0],
-                                "height" => $height,
-                                "width"=> $width,
-								"asset_order" => $data_value['asset_order'],
-                                "is_import" => "0"
-                            ];
-                            $data_image_data = [
-                                'sku' => $sku,
-                                'message' => $item_url[0],
-                                'data_type' => '1',
-                                "lable" => "1"
-                            ];
-                            $this->getInsertDataTable($data_image_data);
-                        }
-                    }
-                    foreach ($image_detail as $img) {
-                        $type[] = $img['item_type'];
-                        $image[] = $img['item_url'];
-                    }
-                    $image_value_array = implode(',', $image);
-                    $flag = $this->getFlag($type);
-                    $new_value_array = json_encode($image_detail, true);
+			case 'document':
+			default:
+				$this->processDocuments($sku, $productId, $storeId, $docValue, $get_data);
+				break;
+		}
+	}
 
-                    if (isset($extra_details['is_mg_import']) && $extra_values['is_mg_import'] == 1) {
-                        $new_value_array = $this->uploadImageToProduct($new_value_array, $product_ids);
-                    }
+	/**
+	 * Handle image sync logic
+	 */
+	private function processImages($sku, $productId, $storeId, $imageValue, $get_data, $extra)
+	{
+		$imageDetail      = [];
+		$diffImageDetail  = [];
+		$existingUrls     = [];
 
-                    if (isset($extra_values['is_widen_cdn']) && $extra_values['is_widen_cdn'] == true) {
-                        $update_details = [
-                            'widen_multi_img' => $new_value_array,
-                            'use_widen_cdn' => 1
-                        ];
-                    } else {
-                        $update_details = [
-                            'widen_multi_img' => $new_value_array
-                        ];
-                    }
-                    $this->productAction->updateAttributes(
-                        [$product_ids],
-                        $update_details,
-                        $storeId
-                    );
-                    $this->productAction->updateAttributes(
-                        [$product_ids],
-                        ['widen_isMain' => $flag],
-                        $storeId
-                    );
-                }
-            } elseif ($select_attribute == "video") {
-                $product_sku_key = "";
-                if (!empty($image_value)) {
-                    $item_old_value = json_decode($image_value, true);
-                    if (count($item_old_value) > 0) {
-                        foreach ($item_old_value as $video) {
-                            $vide_url = $this->getPerfectVideoUrl($video['item_url']);
-                            $all_item_url[] = $vide_url;
-                        }
-                        foreach ($get_data as $data_value) {
-                            if ($data_value['Type'] == 'video') {
-                                $data_img_url = $this->getPerfectVideoUrl($data_value["Image_Url"]);
-                                if (!in_array($data_img_url, $all_item_url)) {
-                                    $img_array = $this->dataHelper->getMakeVideoasThumbForSync(
-                                        $data_value,
-                                        $sku,
-                                        $mediaUrl
-                                    );
-                                    $video_detail[] = [
-                                        "item_url" => $data_img_url,
-                                        "altText" => !empty($data_value['Alt_Text'])?$data_value['Alt_Text']:"",
-                                        "image_role" => null,
-                                        "item_type" => $data_value['Type'],
-                                        "thum_url" => $data_img_url,
-                                        "selected_template_url" => $img_array['template_url'],
-                                        "height" => "",
-                                        "width"=> "",
-                                        "asset_order" => $data_value['asset_order'],
-                                        "is_import" => "0"
-                                    ];
-                                    $data_video_data = [
-                                        'sku' => $sku,
-                                        'message' => $data_img_url,
-                                        'data_type' => '3',
-                                        "lable" => "1"
-                                    ];
-                                    $this->getInsertDataTable($data_video_data);
-                                }
-                            }
-                        }
-                        if (count($video_detail) > 0) {
-                            foreach ($video_detail as $video) {
-                                $type[] = $video['item_type'];
-                            }
-                        }
-                        $flag = $this->getFlag($type);
-                    }
-                    if (count($video_detail) > 0) {
-                        
-                        $array_merge = array_merge($item_old_value, $video_detail);
-                        $new_value_array = json_encode($array_merge, true);
+		if (!empty($imageValue)) {
+			$oldValues = json_decode($imageValue, true);
 
-                        if (isset($extra_values['is_widen_cdn']) && $extra_values['is_widen_cdn'] == true) {
-                            $update_details = [
-                                'widen_multi_img' => $new_value_array,
-                                'use_widen_cdn' => 1
-                            ];
-                        } else {
-                            $update_details = [
-                                'widen_multi_img' => $new_value_array
-                            ];
-                        }
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            $update_details,
-                            $storeId
-                        );
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            ['widen_isMain' => $flag],
-                            $storeId
-                        );
-                    }
-                } else {
-                    foreach ($get_data as $data_value) {
-                        if ($data_value['Type'] == 'video') {
-                            $product_sku_key = "";
-                            $data_img_url = $this->getPerfectVideoUrl($data_value["Image_Url"]);
-                            $video_detail[] = [
-                                "item_url" => $data_img_url,
-                                "altText" => !empty($data_value['Alt_Text'])?$data_value['Alt_Text']:"",
-                                "image_role" => null,
-                                "item_type" => $data_value['Type'],
-                                "thum_url" => $data_img_url,
-                                "selected_template_url" => $data_img_url,
-                                "height" => "",
-                                "width"=> "",
-								"asset_order" => $data_value['asset_order'],
-                                "is_import" => "0"
-                            ];
-                            $data_video_data = [
-                                'sku' => $sku,
-                                'message' => $data_img_url,
-                                'data_type' => '3',
-                                "lable" => "1"
-                            ];
-                            $this->getInsertDataTable($data_video_data);
-                        }
-                    }
-                    foreach ($video_detail as $video) {
-                        $type[] = $video['item_type'];
-                    }
-                    $flag = $this->getFlag($type);
-                    $new_value_array = json_encode($video_detail, true);
+			// Collect existing image URLs
+			foreach ($oldValues as $img) {
+				if ($img['item_type'] === 'image') {
+					$existingUrls[] = $this->getPerfectVideoUrl($img['item_url']);
+				}
+			}
+		} else {
+			$oldValues = [];
+		}
 
-                    if (isset($extra_values['is_widen_cdn']) && $extra_values['is_widen_cdn'] == true) {
-                        $update_details = [
-                            'widen_multi_img' => $new_value_array,
-                            'use_widen_cdn' => 1
-                        ];
-                    } else {
-                        $update_details = [
-                            'widen_multi_img' => $new_value_array
-                        ];
-                    }
-                    $this->productAction->updateAttributes(
-                        [$product_ids],
-                        $update_details,
-                        $storeId
-                    );
-                    $this->productAction->updateAttributes(
-                        [$product_ids],
-                        ['widen_isMain' => $flag],
-                        $storeId
-                    );
-                    
-                }
-            } else {
-                if (empty($doc_value)) {
-                    $doc_detail=[];
-                    foreach ($get_data as $data_value) {
-                        // make this variable dynamic - pending
-                        $product_sku_key = "";
-                        if ($data_value['Type'] == 'pdf' || $data_value['Type'] == 'office') {
-                            $data_doc_url = $this->getPerfectVideoUrl($data_value["Image_Url"]);
-                            $doc_detail[] = [
-                                "item_url" => $data_doc_url,
-                                "item_type" => $data_value['Type'],
-                                "altText" => $data_value['Alt_Text'],
-                                "doc_name" => $data_value['Alt_Text'],
-								"asset_order" => $data_value['asset_order'],
-								
-                            ];
-                            $data_doc_data = [
-                                'sku' => $sku,
-                                'message' => $data_doc_url,
-                                'data_type' => '2',
-                                "lable" => "1"
-                            ];
-                            $this->getInsertDataTable($data_doc_data);
-                        }
-                    }
-                    $new_value_array = json_encode($doc_detail, true);
-                    $this->productAction->updateAttributes(
-                        [$product_ids],
-                        ['widen_document' => $new_value_array],
-                        $storeId
-                    );
-                } else {
-                    /**Not empty means need to add all new Documents */
-                    $old_value = json_decode($doc_value, true);
-                    $doc_detail = [];
-                    $existing_urls = [];
-                    foreach ($old_value as $existing_doc_val) {
-                        $existing_urls[] = $existing_doc_val["item_url"];
-                    }
+		// Build new image data
+		foreach ($get_data as $data) {
+			if ($data['Type'] !== 'image') {
+				continue;
+			}
 
-                    foreach ($get_data as $all_new_urls) {
-                        if ($all_new_urls["Type"] == "pdf" || $all_new_urls["Type"] == "office") {
-                            $new_link = $this->getPerfectVideoUrl($all_new_urls['Image_Url']);
-                            if (!in_array($new_link, $existing_urls)) {
-                                $doc_detail[] = [
-                                    "item_url" => $new_link,
-                                    "item_type" => $all_new_urls['Type'],
-                                    "altText" => $all_new_urls['Alt_Text'],
-                                    "doc_name" => $all_new_urls['Alt_Text'],
-									"asset_order" => $all_new_urls['asset_order'],
-                                ];
-                                $data_doc_data = [
-                                    'sku' => $sku,
-                                    'message' => $new_link,
-                                    'data_type' => '2',
-                                    "lable" => "1"
-                                ];
-                                $this->getInsertDataTable($data_doc_data);
-                            }
-                        }
-                    }
-                    if (count($doc_detail) > 0) {
-                        $array_merge = array_merge($old_value, $doc_detail);
-                        $new_value_array = json_encode($array_merge, true);
-                        $this->productAction->updateAttributes(
-                            [$product_ids],
-                            ['widen_document' => $new_value_array],
-                            $storeId
-                        );
-                    }
-                }
-            }
-        }
-    }
+			$url      = $this->getPerfectVideoUrl($data['Image_Url']);
+			$baseUrl  = explode("?", $url)[0];
+			$roles    = $this->getRoleArray($data);
+			[$width, $height] = $this->extractDimensions($url);
+
+			$imgData = [
+				"item_url"              => $baseUrl,
+				"altText"               => $data['Alt_Text'],
+				"image_role"            => $roles,
+				"item_type"             => $data['Type'],
+				"thum_url"              => $baseUrl,
+				"selected_template_url" => $baseUrl,
+				"height"                => $height,
+				"width"                 => $width,
+				"asset_order"           => $data['asset_order'],
+				"is_import"             => "0"
+			];
+
+			if (!in_array($baseUrl, $existingUrls)) {
+				$diffImageDetail[] = $imgData;
+				$total_new_value = count($diffImageDetail);
+				if ($total_new_value > 1) {
+					foreach ($diffImageDetail as $nn => $n_img) {
+						if ($n_img['item_type'] == "image" && $nn != ($total_new_value - 1)) {
+							if ($roles) {
+								$new_mg_role_array = (array)$roles;
+								if (count($n_img["image_role"]) > 0 && count($new_mg_role_array) > 0) {
+									$result_val=array_diff($n_img["image_role"], $new_mg_role_array);
+									$diffImageDetail[$nn]["image_role"] = $result_val;
+								}
+							}
+						}
+					}
+				}
+				$this->logAsset($sku, $baseUrl, '1');
+			} else {
+				$imageDetail[] = $imgData;
+				$total_new_value = count($imageDetail);
+				if ($total_new_value > 1) {
+					foreach ($imageDetail as $nn => $n_img) {
+						if ($n_img['item_type'] == "image" && $nn != ($total_new_value - 1)) {
+							if ($roles) {
+								$new_mg_role_array = (array)$roles;
+								if (count($n_img["image_role"]) > 0 && count($new_mg_role_array) > 0) {
+									$result_val=array_diff($n_img["image_role"], $new_mg_role_array);
+									$imageDetail[$nn]["image_role"] = $result_val;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		$merged = array_merge($imageDetail, $diffImageDetail);
+
+		$flag = $this->getFlag(array_column($merged, 'item_type'));
+		$json = json_encode($merged, true);
+
+		if (!empty($extra['is_mg_import'])) {
+			$json = $this->uploadImageToProduct($json, $productId);
+		}
+
+		$update = ['widen_multi_img' => $json, 'widen_isMain' => $flag, 'widen_auto_replace' => 1];
+		if (!empty($extra['is_widen_cdn'])) {
+			$update['use_widen_cdn'] = 1;
+		}
+
+		$this->productAction->updateAttributes([$productId], $update, $storeId);
+	}
+
+	/**
+	 * Handle video sync logic
+	 */
+	private function processVideos($sku, $productId, $storeId, $imageValue, $get_data, $extra, $mediaUrl)
+	{
+		$videoDetail  = [];
+		$existingUrls = [];
+
+		if (!empty($imageValue)) {
+			$oldValues = json_decode($imageValue, true);
+			foreach ($oldValues as $video) {
+				$existingUrls[] = $this->getPerfectVideoUrl($video['item_url']);
+			}
+		} else {
+			$oldValues = [];
+		}
+
+		foreach ($get_data as $data) {
+			if ($data['Type'] !== 'video') {
+				continue;
+			}
+
+			$url = $this->getPerfectVideoUrl($data['Image_Url']);
+			if (in_array($url, $existingUrls)) {
+				continue;
+			}
+
+			$thumb = $this->dataHelper->getMakeVideoasThumbForSync($data, $sku, $mediaUrl);
+			$videoDetail[] = [
+				"item_url"              => $url,
+				"altText"               => $data['Alt_Text'] ?? "",
+				"image_role"            => null,
+				"item_type"             => $data['Type'],
+				"thum_url"              => $url,
+				"selected_template_url" => $thumb['template_url'] ?? $url,
+				"height"                => "",
+				"width"                 => "",
+				"asset_order"           => $data['asset_order'],
+				"is_import"             => "0"
+			];
+			$this->logAsset($sku, $url, '3');
+		}
+
+		if (empty($videoDetail)) {
+			return;
+		}
+
+		$merged = array_merge($oldValues, $videoDetail);
+		$flag   = $this->getFlag(array_column($merged, 'item_type'));
+
+		$update = ['widen_multi_img' => json_encode($merged, true), 'widen_isMain' => $flag];
+		if (!empty($extra['is_widen_cdn'])) {
+			$update['use_widen_cdn'] = 1;
+		}
+
+		$this->productAction->updateAttributes([$productId], $update, $storeId);
+	}
+
+	/**
+	 * Handle document sync logic
+	 */
+	private function processDocuments($sku, $productId, $storeId, $docValue, $get_data)
+	{
+		$docDetail     = [];
+		$existingUrls  = [];
+
+		if (!empty($docValue)) {
+			$oldValues = json_decode($docValue, true);
+			foreach ($oldValues as $doc) {
+				$existingUrls[] = $doc["item_url"];
+			}
+		} else {
+			$oldValues = [];
+		}
+
+		foreach ($get_data as $data) {
+			if (!in_array($data['Type'], ['pdf', 'office'])) {
+				continue;
+			}
+
+			$url = $this->getPerfectVideoUrl($data["Image_Url"]);
+			if (in_array($url, $existingUrls)) {
+				continue;
+			}
+
+			$docDetail[] = [
+				"item_url"    => $url,
+				"item_type"   => $data['Type'],
+				"altText"     => $data['Alt_Text'],
+				"doc_name"    => $data['Alt_Text'],
+				"asset_order" => $data['asset_order'],
+			];
+			$this->logAsset($sku, $url, '2');
+		}
+
+		if (empty($docDetail)) {
+			return;
+		}
+
+		$merged = array_merge($oldValues, $docDetail);
+		$this->productAction->updateAttributes([$productId], ['widen_document' => json_encode($merged, true)], $storeId);
+	}
+
+	/**
+	 * Extract width/height from URL query params
+	 */
+	private function extractDimensions($url): array
+	{
+		$parsed = parse_url($url);
+		if (empty($parsed['query'])) {
+			return ['', ''];
+		}
+
+		parse_str($parsed['query'], $params);
+		return [$params['w'] ?? '', $params['h'] ?? ''];
+	}
+
+	/**
+	 * Log insert helper
+	 */
+	private function logAsset($sku, $message, $type)
+	{
+		$this->getInsertDataTable([
+			'sku'     => $sku,
+			'message' => $message,
+			'data_type' => $type,
+			'lable'   => "1"
+		]);
+	}
+
     /**
      * Get Flag
      *
@@ -829,21 +619,25 @@ class SyncSku extends \Magento\Backend\App\Action
      * @param array $widen_role_array
      */
     public function getRoleArray($widen_role_array)
-    {
-        if(in_array("ALL",$widen_role_array['image_roles'])){
-            $img_role = ["image","small_image","thumbnail"];
-        }
-        else if($widen_role_array['image_roles'] == "BASE"){
-            $img_role = ["image"];
-        }
-        else if($widen_role_array['image_roles'] == "SMALL"){
-            $img_role = ["small_image"];
-        }
-        else if($widen_role_array['image_roles'] == "THUMB"){
-            $img_role = ["thumbnail"];
-        }else{
-            $img_role = [];
-        }
-        return $img_role;
-    }
+	{
+		$roles = $widen_role_array['image_roles'] ?? [];
+		if (!is_array($roles)) {
+			$roles = [$roles];
+		}
+		$map = [
+			'ALL'           => ["image", "small_image", "thumbnail"],
+			'BASE'          => ["image"],
+			'SMALL'         => ["small_image"],
+			'THUMB'         => ["thumbnail"],
+			'PLP ROLLOVER'  => ["category_page_list_rollover"],
+		];
+		$img_role = [];
+		foreach ($roles as $role) {
+			$role = strtoupper(trim($role));
+			if (isset($map[$role])) {
+				$img_role = array_merge($img_role, $map[$role]);
+			}
+		}
+		return array_unique($img_role);
+	}
 }

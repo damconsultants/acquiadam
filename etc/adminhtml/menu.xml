@@ -52,6 +52,12 @@
            action="acquiadam/index/sync"
            resource="DamConsultants_AcquiaDam::menu_item3"
            />
+		<add id="DamConsultants_AcquiaDam::menu_item9"
+           title="Check Sku Log" module="DamConsultants_AcquiaDam"
+           sortOrder="10" parent="DamConsultants_AcquiaDam::menu_item6"
+           action="acquiadam/index/sku"
+           resource="DamConsultants_AcquiaDam::menu_item9"
+           />
        <!-- END:   new node -->
        <!-- START: new node -->
        <add id="DamConsultants_AcquiaDam::menu_item2"

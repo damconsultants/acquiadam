@@ -21,6 +21,7 @@ if (count($get_metaData) > 0) {
         $alt_checked = "";
 		$color_checked = "";
 		$order_checked = "";
+		$rollover_checked = "";
         if ($default_sku_value == $newKey) {
             $sku_checked = "selected";
         } elseif ($default_image_role_value == $newKey) {
@@ -31,7 +32,7 @@ if (count($get_metaData) > 0) {
             $color_checked = "selected";
         } elseif ($default_order == $newKey) {
             $order_checked = "selected";
-        } 
+        }
         $sku_properites .= '<option value="' . $newKey . '" ' . $sku_checked . ' >' .
                         $block->escapeHtml($newValue) .
                         '</option>';
@@ -113,7 +114,6 @@ if (count($get_metaData) > 0) {
 						</select>
 				</div>
             </div>
-
 
             <div class="product-imp-list">
                 <h4 class="product-imp-label">The Meta Property Configration For the Alt Text :-</h4>

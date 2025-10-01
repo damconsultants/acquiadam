@@ -511,8 +511,8 @@ class Data extends AbstractHelper
         $post_filed_array = [
             "permentant_token" => $this->getPermanentToken(),
             "param_data" => [
-				'color_number' => $color_style['color_number'],
-                'style_number' => $color_style['style_number'],
+				'color_number' => isset($color_style['color_number'])?$color_style['color_number']:"",
+                'style_number' => isset($color_style['style_number'])?$color_style['style_number']:"",
                 'properties_details' => $properties_details
             ]
         ];

@@ -2,11 +2,14 @@
 
 namespace DamConsultants\AcquiaDam\Cron;
 
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
 use \Psr\Log\LoggerInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Model\ProductRepository;
 use Magento\Catalog\Model\Product\Action;
 use DamConsultants\AcquiaDam\Model\AcquiaDamSycDataFactory;
+use Magento\Eav\Model\Config as EavConfig;
 use DamConsultants\AcquiaDam\Model\ResourceModel\Collection\MetaPropertyCollectionFactory;
 
 class FetchNullDataToMagento
@@ -43,6 +46,10 @@ class FetchNullDataToMagento
      * @var \DamConsultants\AcquiaDam\Model\AcquiaDamSycDataFactory
      */
     protected $_acquiadamsycData;
+	/**
+     * @var \Magento\Eav\Model\Config
+     */
+    protected $eavConfig;
 
     /**
      * Featch Null Data To Magento
@@ -52,6 +59,7 @@ class FetchNullDataToMagento
      * @param StoreManagerInterface $storeManagerInterface
      * @param \DamConsultants\AcquiaDam\Helper\Data $DataHelper
      * @param Action $action
+	 * @param EavConfig $eavConfig
      * @param MetaPropertyCollectionFactory $metaPropertyCollectionFactory
      * @param AcquiaDamSycDataFactory $acquiadamsycData
      */
@@ -62,6 +70,7 @@ class FetchNullDataToMagento
         StoreManagerInterface $storeManagerInterface,
         \DamConsultants\AcquiaDam\Helper\Data $DataHelper,
         Action $action,
+		EavConfig $eavConfig,
         MetaPropertyCollectionFactory $metaPropertyCollectionFactory,
         AcquiaDamSycDataFactory $acquiadamsycData
     ) {
@@ -71,47 +80,61 @@ class FetchNullDataToMagento
         $this->collectionFactory = $collectionFactory;
         $this->datahelper = $DataHelper;
         $this->action = $action;
+		$this->eavConfig = $eavConfig;
         $this->metaPropertyCollectionFactory = $metaPropertyCollectionFactory;
         $this->storeManagerInterface = $storeManagerInterface;
         $this->_acquiadamsycData = $acquiadamsycData;
     }
+
     /**
      * Execute
      *
-     * @return $this
+     * @return void
+     * @throws NoSuchEntityException
      */
     public function execute()
     {
         $enable = $this->datahelper->getFetchCronEnable();
         if (!$enable) {
-            return false;
+            return;
         }
-        $product_collection = $this->collectionFactory->create()
-            ->addAttributeToSelect('*')
-            ->addAttributeToFilter('visibility', \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH)
-            ->addAttributeToFilter('status', \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED)
-            ->addAttributeToFilter(
-                [
-                    ['attribute' => 'widen_multi_img', 'null' => true]
-                ]
-            )
-            ->addAttributeToFilter(
-                [
-                    ['attribute' => 'widen_cron_sync', 'null' => true]
-                ]
-            )
-            ->load();
-        $product_sku_limit = $this->datahelper->getProductSkuLimitConfig();
-        if (!empty($product_sku_limit)) {
-            $product_collection->getSelect()->limit($product_sku_limit);
-        } else {
-            $product_collection->getSelect()->limit(5);
-        }
-        $productSku_array = [];
-        foreach ($product_collection as $product) {
-            $productSku_array[] = $product->getSku();
-        }
-        
+		$storeIds   = array_map('intval', array_keys($this->storeManagerInterface->getStores(true)));
+		$statusAttr = $this->eavConfig->getAttribute(\Magento\Catalog\Model\Product::ENTITY, 'status');
+
+		$productCollection = $this->collectionFactory->create()
+			->addAttributeToSelect(['sku', 'widen_multi_img', 'widen_cron_sync'])
+			->addAttributeToFilter('visibility', \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH)
+			->addAttributeToFilter('widen_multi_img', ['null' => true])
+			->addAttributeToFilter('widen_cron_sync', ['null' => true]);
+
+		$table = $productCollection->getResource()->getTable('catalog_product_entity_int');
+
+		/*Join status per store (multi-store safe)*/
+		$joinCondition  = $productCollection->getConnection()->quoteInto(
+			'status_attr.entity_id = e.entity_id AND status_attr.attribute_id = ?',
+			(int)$statusAttr->getId()
+		);
+		$joinCondition .= ' AND status_attr.store_id IN (' . implode(',', $storeIds) . ')';
+
+		$productCollection->getSelect()->joinLeft(
+			['status_attr' => $table],
+			$joinCondition,
+			[]
+		);
+
+		/*Keep only enabled products*/
+		$statusEnabled = \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED;
+		$productCollection->getSelect()
+			->where('status_attr.value = ?', $statusEnabled)
+			->limit($this->datahelper->getProductSkuLimitConfig() ?: 100)
+			->group('e.entity_id'); /*ensures unique products*/
+
+		/*Debugging*/
+		$productSku_array = [];
+		foreach ($productCollection as $product) {
+			$productSku_array[] = $product->getSku();
+		}
+
         $collection = $this->metaPropertyCollectionFactory->create();
         $properties_details = [];
         $all_properties_slug = [];
@@ -132,21 +155,21 @@ class FetchNullDataToMagento
 
         }
         if (count($productSku_array) > 0) {
-			$color_style = [];
+            $color_style = [];
             foreach ($productSku_array as $sku) {
-				$_product = $this->_productRepository->get($sku);
-				if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
+                $_product = $this->_productRepository->get($sku);
+                if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
                     $color_style = [
                         "color_number" =>  $_product->getAttributeText('color'),
                         "style_number" =>  $_product->getStyle()
-                    ];	
-				}
+                    ];
+                }
                 $get_data =  $this->datahelper->getAcquiaDamImageSyncWithProperties($color_style, $properties_details);
                 $get_data_json_decode = json_decode($get_data, true);
                 $fetch_details = $get_data_json_decode['data'];
                 if (count($fetch_details) > 0) {
                     try {
-                        $this->getDataItem($fetch_details, $all_properties_slug, $sku);
+                        $this->getDataItem($fetch_details, $all_properties_slug, $sku, $_product);
                     } catch (Exception $e) {
                         $insert_data = [
                             "sku" => $sku,
@@ -175,8 +198,7 @@ class FetchNullDataToMagento
                         'widen_cron_sync' => 2
                     ];
 
-                    $storeId = $this->getMyStoreId();
-                    $_product = $this->_productRepository->get($sku);
+                    $storeId = (int)$this->getMyStoreId();
                     $product_ids = $_product->getId();
 
                     $this->action->updateAttributes(
@@ -188,7 +210,6 @@ class FetchNullDataToMagento
 
             }
         }
-        return true;
     }
     /**
      * Get Data Item
@@ -196,12 +217,13 @@ class FetchNullDataToMagento
      * @param array $get_data
      * @param array $all_properties_slug
      * @param array $sku
+     * @param ProductInterface $product
      */
-    public function getDataItem($get_data, $all_properties_slug, $sku)
+    public function getDataItem($get_data, $all_properties_slug, $sku, ProductInterface $product)
     {
         $image_detail = [];
         $doc_detail = [];
-        $_product = $this->_productRepository->get($sku);
+        $_product = $product;
         $storeId = $this->storeManagerInterface->getStore()->getId();
         $product_ids = $_product->getId();
         $image_value = $_product->getWidenMultiImg();
@@ -223,7 +245,7 @@ class FetchNullDataToMagento
                             $item_url = explode("?", $data_img_url);
                             if (!in_array($item_url[0], $all_item_url)) {
                                 if ($data_value['Type'] == 'image') {
-                                    $new_image_role = $this->getRoleArray($data_value);;
+                                    $new_image_role = $this->getRoleArray($data_value);
                                 } else {
                                     $new_image_role = null;
                                 }
@@ -244,7 +266,7 @@ class FetchNullDataToMagento
                                     "selected_template_url" => $item_url[0],
                                     "height" => $height,
                                     "width"=> $width,
-									"asset_order" => $data_value['asset_order'],
+                                    "asset_order" => $data_value['asset_order'],
                                     "is_import" => "0"
 
                                 ];
@@ -266,7 +288,7 @@ class FetchNullDataToMagento
                                     "item_type" => $data_value['Type'],
                                     "altText" => $data_value['Alt_Text'],
                                     "doc_name" => $data_value['Alt_Text'],
-									"asset_order" => $data_value['asset_order']
+                                    "asset_order" => $data_value['asset_order']
                                 ];
                                 $data_doc_data = [
                                     'sku' => $sku,
@@ -351,7 +373,7 @@ class FetchNullDataToMagento
                                 "selected_template_url" => $item_url[0],
                                 "height" => $height,
                                 "width"=> $width,
-								"asset_order" => $data_value['asset_order'],
+                                "asset_order" => $data_value['asset_order'],
                                 "is_import" => "0"
         
                             ];
@@ -372,7 +394,7 @@ class FetchNullDataToMagento
                                     "item_type" => $data_value['Type'],
                                     "altText" => $data_value['Alt_Text'],
                                     "doc_name" => $data_value['Alt_Text'],
-									"asset_order" => $data_value['asset_order']
+                                    "asset_order" => $data_value['asset_order']
                                 ];
                                 $data_doc_data = [
                                     'sku' => $sku,
@@ -471,10 +493,12 @@ class FetchNullDataToMagento
         $model->setData($data_image_data);
         $model->save();
     }
+
     /**
      * Is int
      *
-     * @return $this
+     * @return int
+     * @throws NoSuchEntityException
      */
 
     public function getMyStoreId()
@@ -483,27 +507,23 @@ class FetchNullDataToMagento
         return $storeId;
     }
      /**
-     * Get Role Array
-     *
-     * @param array $widen_role_array
-     */
+      * Get Role Array
+      *
+      * @param array $widen_role_array
+      */
     public function getRoleArray($widen_role_array)
     {
-        if(in_array("ALL",$widen_role_array['image_roles'])){
+        if (in_array("ALL", $widen_role_array['image_roles'])) {
             $img_role = ["image","small_image","thumbnail"];
-        }
-        else if($widen_role_array['image_roles'] == "BASE"){
+        } elseif ($widen_role_array['image_roles'] == "BASE") {
             $img_role = ["image"];
-        }
-        else if($widen_role_array['image_roles'] == "SMALL"){
+        } elseif ($widen_role_array['image_roles'] == "SMALL") {
             $img_role = ["small_image"];
-        }
-        else if($widen_role_array['image_roles'] == "THUMB"){
+        } elseif ($widen_role_array['image_roles'] == "THUMB") {
             $img_role = ["thumbnail"];
-        }else{
+        } else {
             $img_role = [];
         }
         return $img_role;
     }
-
 }

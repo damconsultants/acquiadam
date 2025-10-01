@@ -8,6 +8,7 @@
  *
  * @var $block \Magento\Catalog\Block\Product\View\Gallery
  * @var $block $acquiadam_image
+ * @var $escaper \Magento\Framework\Escaper
  */
 ?>
 
@@ -22,7 +23,7 @@ if (!empty($acquiadam_image)) {
 }
 $images = $block->getGalleryImages()->getItems();
 $mainImage = current(array_filter($images, function ($img) use ($block) {
-            return $block->isMainImage($img);
+    return $block->isMainImage($img);
 }));
 
 if (!empty($images) && empty($mainImage)) {
@@ -31,8 +32,8 @@ if (!empty($images) && empty($mainImage)) {
 
 $helper = $block->getData('imageHelper');
 $mainImageData = $mainImage ?
-        $mainImage->getData('medium_image_url') :
-        $helper->getDefaultPlaceholderUrl('image');
+    $mainImage->getData('medium_image_url') :
+    $helper->getDefaultPlaceholderUrl('image');
 
 
 $img_url = $mainImageData;
@@ -40,14 +41,85 @@ $one_img = $block->getSingleImage();
 if (!empty($one_img) && $one_img !='0') {
     $img_url = $one_img;
 }
+/** @var \Magento\Eav\Model\Config $eavConfig */
+$eavConfig = \Magento\Framework\App\ObjectManager::getInstance()
+    ->get(\Magento\Eav\Model\Config::class);
+
+$colorAttribute = $eavConfig->getAttribute(\Magento\Catalog\Model\Product::ENTITY, 'color');
+$colorAttributeId = $colorAttribute->getAttributeId();
+if ($block->getProduct()->getTypeId() === \Magento\ConfigurableProduct\Model\Product\Type\Configurable::TYPE_CODE && strpos($img_url, 'placeholder') !== false) {
+    /** @var \Magento\Swatches\Block\Product\Renderer\Configurable $swatchBlock */
+    $swatchBlock = $this->getLayout()->getBlock('product.info.options.swatches');
+    if (!$swatchBlock) {
+        $swatchBlock = $this->getLayout()->createBlock(\Magento\Swatches\Block\Product\Renderer\Configurable::class);
+    }
+    $jsonConfig = $swatchBlock->getJsonConfig();
+    if ($jsonConfig) {
+        $jsonConfig = json_decode($jsonConfig, true);
+        if (isset($jsonConfig['images']) && is_array($jsonConfig['images']) && count($jsonConfig['images'])) {
+            $productId = false;
+            //$colorAttributeId = 92; // hard-coded yes, but highly unlikely to ever change
+            $defaultColor = $block->getProduct()->getDefaultColor();
+            if ($defaultColor
+                && isset($jsonConfig['attributes'][$colorAttributeId]['options'])
+                && is_array($jsonConfig['attributes'][$colorAttributeId]['options'])
+            ) {
+                foreach ($jsonConfig['attributes'][$colorAttributeId]['options'] as $option) {
+                    if (isset($option['label'], $option['products'][0])
+                        && stripos($option['label'], $defaultColor) !== false
+                    ) {
+                        $productId = $option['products'][0];
+                        break;
+                    }
+                }
+            }
+            $images = current($jsonConfig['images']);
+            if ($productId && !empty($jsonConfig['images'][$productId])) {
+                $images = $jsonConfig['images'][$productId];
+                usort($images, function ($item1, $item2) {
+                    return $item1['position'] <=> $item2['position'];
+                });
+            }
+            if (isset($images[0]['img'])) {
+                $img_url = $images[0]['img'];
+                $mainImage = true;
+            }
+        } else {
+            // i.e. out of stock
+            $mainImage = true;
+            $imageBlock =  $this->getLayout()->createBlock(\Magento\Catalog\Block\Product\ListProduct::class);
+            $variants = $block->getProduct()->getTypeInstance()->getAllUsedProducts($block->getProduct());
+            $defaultColor = $block->getProduct()->getDefaultColor();
+            $mainImageFallback = null;
+            $mainImageVariant = null;
+            foreach ($variants as $variant) {
+                $variantImage = $imageBlock->getImage($variant, 'product_page_image_medium')->getImageUrl();
+                if (strpos($img_url, 'placeholder') !== false) {
+                    if ($mainImageFallback === null) {
+                        $mainImageFallback = $variantImage;
+                    }
+                    if (!$defaultColor || stripos($variant->getAttributeText('color'), $defaultColor) !== false) {
+                        $mainImageVariant = $variantImage;
+                        break;
+                    }
+                }
+            }
+            if ($mainImageVariant) {
+                $img_url = $mainImageVariant;
+            } elseif ($mainImageFallback) {
+                $img_url = $mainImageFallback;
+            }
+        }
+    }
+}
 ?>
 
 <div class="gallery-placeholder _block-content-loading" data-gallery-role="gallery-placeholder">
     <img
-        alt="main product photo"
-        class="gallery-placeholder__image"
-        src="<?= /* @noEscape */ $img_url /* $mainImageData */ ?>"
-        />
+            alt="<?= $escaper->escapeHtmlAttr(__('5.11 Tactical - %1', $block->getProduct()->getName())) ?>"
+            class="gallery-placeholder__image"
+            src="<?= /* @noEscape */ $img_url /* $mainImageData */ ?>"
+    />
 </div>
 
 
@@ -61,60 +133,60 @@ if (!empty($one_img) && $one_img !='0') {
                 "options": <?= /* @noEscape */ $block->getGalleryOptions()->getOptionsJson() ?>,
                 "fullscreen": <?= /* @noEscape */ $block->getGalleryOptions()->getFSOptionsJson() ?>,
                 "breakpoints": <?= /* @noEscape */ $block->getBreakpoints() ?>
-            }
-        }
     }
+}
+}
 </script>
 
 <style>
-#video-tag {
-    margin: 50px;
-    padding: 100px 0px 152px;
-    height: 450px;
-}
-.video_control {
-    opacity:0.5;
-}
+    #video-tag {
+        margin: 50px;
+        padding: 100px 0px 152px;
+        height: 450px;
+    }
+    .video_control {
+        opacity:0.5;
+    }
 </style>
 
 <script>
-   require(['jquery'], function ($) {
+    require(['jquery'], function ($) {
         $(document).on('gallery:loaded', function () {
             var $fotorama = jQuery('div.gallery-placeholder > div.fotorama');
             var fotorama = $fotorama.data('fotorama');
             var data_array = '<?= $block->escapeHtml(json_encode($type)); ?>';
             var parsedTest = JSON.parse(data_array)
             if($.inArray("video", parsedTest) >= 0 ) {
-                    $fotorama.on('fotorama:load', function fotorama_onLoad(e, fotorama, extra) {
-                        console.log(extra.frame.type);
-                        if (extra.frame.type === 'iframe') {
-                            extra.frame.$stageFrame.html(
-                                '<div class="fotorama-video-container video-unplayed video_control">'+
-                                '<video id="video-tag"  width="75%"><source src="' + extra.frame.src + '" type="video/mp4"></video></div>'
-                                );
-                        }
-                    });
-                    var fotorama = $('.fotorama').fotorama({allowfullscreen: false}).data('fotorama');
-                    fotorama.requestFullScreen();
-                    var $fotoramaDiv = $('.fotorama').fotorama();
-                    $fotoramaDiv.data('fotorama').show(0);
-                    $(".fotorama__arr.fotorama__arr--next, .fotorama__arr.fotorama__arr--prev, .fotorama__nav__shaft").click(function(){
+                $fotorama.on('fotorama:load', function fotorama_onLoad(e, fotorama, extra) {
+                    console.log(extra.frame.type);
+                    if (extra.frame.type === 'iframe') {
+                        extra.frame.$stageFrame.html(
+                            '<div class="fotorama-video-container video-unplayed video_control">'+
+                            '<video id="video-tag"  width="75%"><source src="' + extra.frame.src + '" type="video/mp4"></video></div>'
+                        );
+                    }
+                });
+                var fotorama = $('.fotorama').fotorama({allowfullscreen: false}).data('fotorama');
+                fotorama.requestFullScreen();
+                var $fotoramaDiv = $('.fotorama').fotorama();
+                $fotoramaDiv.data('fotorama').show(0);
+                $(".fotorama__arr.fotorama__arr--next, .fotorama__arr.fotorama__arr--prev, .fotorama__nav__shaft").click(function(){
                     jQuery(".fotorama__active #video-tag").get(0).pause();
                     jQuery(".fotorama__active #video-tag").get(0).currentTime = 0;
                     jQuery('.fotorama__active .video_control').addClass("fotorama-video-container");
                     jQuery('.fotorama__active .video_control').css("opacity","0.5");
                     jQuery('.fotorama__active #video-tag').attr('controls',false);
 
-                    });
-                    
-                    $(document).on("click",".video_control",function(){
-                        jQuery('.fotorama__active .video_control').removeClass("fotorama-video-container");
-                        jQuery('.fotorama__active .video_control').css("opacity","1");
-                        $('.fotorama__active #video-tag').attr('controls',true);
-                        jQuery(".fotorama__active #video-tag").get(0).play();
-                        
-                    });
-                }
-            });
+                });
+
+                $(document).on("click",".video_control",function(){
+                    jQuery('.fotorama__active .video_control').removeClass("fotorama-video-container");
+                    jQuery('.fotorama__active .video_control').css("opacity","1");
+                    $('.fotorama__active #video-tag').attr('controls',true);
+                    jQuery(".fotorama__active #video-tag").get(0).play();
+
+                });
+            }
         });
+    });
 </script>

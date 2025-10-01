@@ -2,11 +2,14 @@
 
 namespace DamConsultants\AcquiaDam\Cron;
 
+use Magento\Catalog\Api\Data\ProductInterface;
+use Magento\Framework\Exception\NoSuchEntityException;
 use \Psr\Log\LoggerInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use Magento\Catalog\Model\ProductRepository;
 use Magento\Catalog\Model\Product\Action;
 use DamConsultants\AcquiaDam\Model\AcquiaDamSycDataFactory;
+use Magento\Eav\Model\Config as EavConfig;
 use DamConsultants\AcquiaDam\Model\ResourceModel\Collection\MetaPropertyCollectionFactory;
 
 class AutoAddFromMagento
@@ -47,6 +50,10 @@ class AutoAddFromMagento
      * @var \DamConsultants\AcquiaDam\Model\AcquiaDamAutoReplaceDataFactory
      */
     protected $_acquiadamAutoReplaceData;
+	/**
+     * @var \Magento\Eav\Model\Config
+     */
+    protected $eavConfig;
 
     /**
      * Featch Null Data To Magento
@@ -57,6 +64,7 @@ class AutoAddFromMagento
      * @param \DamConsultants\AcquiaDam\Helper\Data $DataHelper
      * @param \DamConsultants\AcquiaDam\Model\AcquiaDamAutoReplaceDataFactory $acquiadamAutoReplaceData
      * @param Action $action
+	 * @param EavConfig $eavConfig
      * @param MetaPropertyCollectionFactory $metaPropertyCollectionFactory
      * @param AcquiaDamSycDataFactory $acquiadamsycData
      */
@@ -68,6 +76,7 @@ class AutoAddFromMagento
         \DamConsultants\AcquiaDam\Helper\Data $DataHelper,
         \DamConsultants\AcquiaDam\Model\AcquiaDamAutoReplaceDataFactory $acquiadamAutoReplaceData,
         Action $action,
+		EavConfig $eavConfig,
         MetaPropertyCollectionFactory $metaPropertyCollectionFactory,
         AcquiaDamSycDataFactory $acquiadamsycData
     ) {
@@ -78,40 +87,61 @@ class AutoAddFromMagento
         $this->datahelper = $DataHelper;
         $this->_acquiadamAutoReplaceData = $acquiadamAutoReplaceData;
         $this->action = $action;
+		$this->eavConfig = $eavConfig;
         $this->metaPropertyCollectionFactory = $metaPropertyCollectionFactory;
         $this->storeManagerInterface = $storeManagerInterface;
         $this->_acquiadamsycData = $acquiadamsycData;
     }
+
     /**
      * Execute
      *
-     * @return $this
+     * @return void
+     * @throws NoSuchEntityException
      */
     public function execute()
     {
         $enable = $this->datahelper->getAutoCronEnable();
         if (!$enable) {
-            return false;
+            return;
         }
-        $product_collection = $this->collectionFactory->create()
-            ->addAttributeToSelect('*')
-            ->addAttributeToFilter('visibility', \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH)
-            ->addAttributeToFilter('status', \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED)
-            ->addAttributeToFilter(
-                [
-                    ['attribute' => 'widen_multi_img', 'notnull' => true]
-                ]
-            )
-            ->addAttributeToFilter(
-                [
-                    ['attribute' => 'widen_auto_replace', 'null' => true]
-                ]
-            )
-            ->load();
-        $productSku_array = [];
-        foreach ($product_collection as $product) {
-            $productSku_array[] = $product->getSku();
-        }
+        
+        $storeIds   = array_map('intval', array_keys($this->storeManagerInterface->getStores(true)));
+		$statusAttr = $this->eavConfig->getAttribute(\Magento\Catalog\Model\Product::ENTITY, 'status');
+
+		$productCollection = $this->collectionFactory->create()
+			->addAttributeToSelect(['sku', 'widen_multi_img', 'widen_auto_replace'])
+			->addAttributeToFilter('visibility', \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH)
+			->addAttributeToFilter('widen_multi_img', ['notnull' => true])
+			->addAttributeToFilter('widen_auto_replace', ['null' => true]);
+
+		$table = $productCollection->getResource()->getTable('catalog_product_entity_int');
+
+		/*Join status per store (multi-store safe)*/
+		$joinCondition  = $productCollection->getConnection()->quoteInto(
+			'status_attr.entity_id = e.entity_id AND status_attr.attribute_id = ?',
+			(int)$statusAttr->getId()
+		);
+		$joinCondition .= ' AND status_attr.store_id IN (' . implode(',', $storeIds) . ')';
+
+		$productCollection->getSelect()->joinLeft(
+			['status_attr' => $table],
+			$joinCondition,
+			[]
+		);
+
+		/*Keep only enabled products*/
+		$statusEnabled = \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED;
+		$productCollection->getSelect()
+			->where('status_attr.value = ?', $statusEnabled)
+			->limit($this->datahelper->getProductSkuLimitConfig() ?: 100)
+			->group('e.entity_id'); /*ensures unique products*/
+
+		/*Debugging*/
+		$productSku_array = [];
+		foreach ($productCollection as $product) {
+			$productSku_array[] = $product->getSku();
+		}
         $collection = $this->metaPropertyCollectionFactory->create();
         $properties_details = [];
         $all_properties_slug = [];
@@ -133,19 +163,19 @@ class AutoAddFromMagento
         }
         if (count($productSku_array) > 0) {
             foreach ($productSku_array as $sku) {
-				$_product = $this->_productRepository->get($sku);
-				if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
+                $_product = $this->_productRepository->get($sku);
+                if (!empty($_product->getStyle()) || !empty($_product->getColor())) {
                     $color_style = [
                         "color_number" =>  $_product->getAttributeText('color'),
                         "style_number" =>  $_product->getStyle()
-                    ];	
-				}
+                    ];
+                }
                 $get_data =  $this->datahelper->getAcquiaDamImageSyncWithProperties($color_style, $properties_details);
                 $get_data_json_decode = json_decode($get_data, true);
                 $fetch_details = $get_data_json_decode['data'];
                 if (count($fetch_details) > 0) {
                     try {
-                        $this->getDataItem($fetch_details, $all_properties_slug, $sku);
+                        $this->getDataItem($fetch_details, $all_properties_slug, $sku, $_product);// @DO - added parameter $_product
                     } catch (Exception $e) {
                         $insert_data = [
                             "sku" => $sku,
@@ -156,7 +186,6 @@ class AutoAddFromMagento
                             'widen_auto_replace' => 1
                         ];
                         $storeId = $this->getMyStoreId();
-                        $_product = $this->_productRepository->get($sku);
                         $product_ids = $_product->getId();
 
                         $this->action->updateAttributes(
@@ -179,7 +208,6 @@ class AutoAddFromMagento
                     ];
 
                     $storeId = $this->getMyStoreId();
-                    $_product = $this->_productRepository->get($sku);
                     $product_ids = $_product->getId();
 
                     $this->action->updateAttributes(
@@ -191,18 +219,36 @@ class AutoAddFromMagento
 
             }
         } else {
-            $product_collection = $this->collectionFactory->create()
-            ->addAttributeToSelect('*')
-            ->addAttributeToFilter('visibility', \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH)
-            ->addAttributeToFilter('status', \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED)
-            ->addAttributeToFilter(
-                [
-                    ['attribute' => 'widen_auto_replace', 'notnull' => true]
-                ]
-            )
-            ->load();
+            $productCollection = $this->collectionFactory->create()
+				->addAttributeToSelect(['sku','widen_auto_replace'])
+				->addAttributeToFilter('visibility', \Magento\Catalog\Model\Product\Visibility::VISIBILITY_BOTH)
+				->addAttributeToFilter('widen_auto_replace', ['notnull' => true]);
+
+			$table = $productCollection->getResource()->getTable('catalog_product_entity_int');
+
+			/*Join status per store (multi-store safe)*/
+			$joinCondition  = $productCollection->getConnection()->quoteInto(
+				'status_attr.entity_id = e.entity_id AND status_attr.attribute_id = ?',
+				(int)$statusAttr->getId()
+			);
+			$joinCondition .= ' AND status_attr.store_id IN (' . implode(',', $storeIds) . ')';
+
+			$productCollection->getSelect()->joinLeft(
+				['status_attr' => $table],
+				$joinCondition,
+				[]
+			);
+
+			/*Keep only enabled products*/
+			$statusEnabled = \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED;
+			$productCollection->getSelect()
+				->where('status_attr.value = ?', $statusEnabled)
+				->limit($this->datahelper->getProductSkuLimitConfig() ?: 100)
+				->group('e.entity_id'); /*ensures unique products*/
+
+			/*Debugging*/
             $id = [];
-            foreach ($product_collection as $product) {
+            foreach ($productCollection as $product) {
                 $id[] = $product->getId();
             }
             $storeId = $this->storeManagerInterface->getStore()->getId();
@@ -212,7 +258,6 @@ class AutoAddFromMagento
                 $storeId
             );
         }
-        return true;
     }
     /**
      * Get Data Item
@@ -220,8 +265,9 @@ class AutoAddFromMagento
      * @param array $get_data
      * @param array $all_properties_slug
      * @param array $sku
+     * @param ProductInterface $product
      */
-    public function getDataItem($get_data, $all_properties_slug, $sku)
+    public function getDataItem($get_data, $all_properties_slug, $sku, ProductInterface $product)
     {
         $image_detail = [];
         $doc_detail = [];
@@ -232,7 +278,7 @@ class AutoAddFromMagento
         $new_image_detail = [];
         $image =[];
         $images =[];
-        $_product = $this->_productRepository->get($sku);
+        $_product = $product;
         $storeId = $this->storeManagerInterface->getStore()->getId();
         $product_ids = $_product->getId();
         $image_value = $_product->getWidenMultiImg();
@@ -398,12 +444,13 @@ class AutoAddFromMagento
         $model->setData($data_image_data);
         $model->save();
     }
+
     /**
      * Is int
      *
-     * @return $this
+     * @return int
+     * @throws NoSuchEntityException
      */
-
     public function getMyStoreId()
     {
         $storeId = $this->storeManagerInterface->getStore()->getId();
@@ -427,24 +474,21 @@ class AutoAddFromMagento
         return $flag;
     }
       /**
-     * Get Role Array
-     *
-     * @param array $widen_role_array
-     */
+       * Get Role Array
+       *
+       * @param array $widen_role_array
+       */
     public function getRoleArray($widen_role_array)
     {
-        if(in_array("ALL",$widen_role_array['image_roles'])){
+        if (in_array("ALL", $widen_role_array['image_roles'])) {
             $img_role = ["image","small_image","thumbnail"];
-        }
-        else if($widen_role_array['image_roles'] == "BASE"){
+        } elseif ($widen_role_array['image_roles'] == "BASE") {
             $img_role = ["image"];
-        }
-        else if($widen_role_array['image_roles'] == "SMALL"){
+        } elseif ($widen_role_array['image_roles'] == "SMALL") {
             $img_role = ["small_image"];
-        }
-        else if($widen_role_array['image_roles'] == "THUMB"){
+        } elseif ($widen_role_array['image_roles'] == "THUMB") {
             $img_role = ["thumbnail"];
-        }else{
+        } else {
             $img_role = [];
         }
         return $img_role;

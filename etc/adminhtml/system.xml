@@ -56,10 +56,10 @@
                     <label>Acquia DAM CDN</label>
                     <frontend_model>DamConsultants\AcquiaDam\Block\System\Config\Checkboxcdn</frontend_model>
                 </field>
-                <field id="magento_import" translate="label" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
+                <!--<field id="magento_import" translate="label" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Magento Import</label>
                     <frontend_model>DamConsultants\AcquiaDam\Block\System\Config\Checkboximport</frontend_model>
-                </field>
+                </field>-->
                 <field id="sku" translate="label" type="textarea" sortOrder="4" showInDefault="1" showInWebsite="1" showInStore="1">
                     <label>Product Sku</label>
                     <comment>Enter Sku code with comma separated.(Ex. 24-MB01,25-MB02,26-MB03).</comment>
@@ -69,6 +69,9 @@
                 </field>
                 <field id="bt_id_1" translate="label" type="button" sortOrder="6" showInDefault="1" showInWebsite="1" showInStore="3">
                     <frontend_model>DamConsultants\AcquiaDam\Block\System\Config\SyncSkuButton</frontend_model>
+                </field>
+				<field id="bt_id_3" translate="label" type="button" sortOrder="7" showInDefault="1" showInWebsite="1" showInStore="3">
+                    <frontend_model>DamConsultants\AcquiaDam\Block\System\Config\SyncAllButton</frontend_model>
                 </field>
             </group>
         </section>

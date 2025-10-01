@@ -149,16 +149,18 @@ class ProductDataSaveAfter implements ObserverInterface
         $flag = 0;
         if (!empty($image)) {
             if (!empty($img_array)) {
-                foreach ($img_array as $img) {
-                    $type[] = $img['item_type'];
-                }
-                if (in_array("image", $type) && in_array("video", $type)) {
-                    $flag = 1;
-                } elseif (in_array("image", $type)) {
-                    $flag = 2;
-                } elseif (in_array("video", $type)) {
-                    $flag = 3;
-                }
+				if (count($img_array) > 0) {
+					foreach ($img_array as $img) {
+						$type[] = $img['item_type'];
+					}
+					if (in_array("image", $type) && in_array("video", $type)) {
+						$flag = 1;
+					} elseif (in_array("image", $type)) {
+						$flag = 2;
+					} elseif (in_array("video", $type)) {
+						$flag = 3;
+					}
+				}
             }
             $this->productActionObject->updateAttributes(
                 [$productId],

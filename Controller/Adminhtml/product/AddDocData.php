@@ -99,7 +99,7 @@ class AddDocData extends \Magento\Backend\App\Action
     public function execute()
     {
         $connection = $this->_resource->getConnection();
-        $table_name = $connection->getTableName('acquiadam_temp_doc_data');
+        $table_name = $connection->getTableName('widen_temp_doc_data');
         $product_id = $this->getRequest()->getParam('product_id');
         $coockie_id = $this->getRequest()->getParam('doc_coockie_id');
         $acquiadam_doc = $this->getRequest()->getParam('doc');

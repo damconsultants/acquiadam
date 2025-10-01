@@ -149,11 +149,11 @@ $admin = $block->getBackendArea();
 
 
 
-    jQuery(document).on('click','.acquiadam_url_doc button',function(){
+    jQuery(document).on('click','.widen_url_doc button',function(){
         var old_selected_acquiadam_doc = [];
         
         /* extract old doc format for new format */
-        var old_acquiadam_doc = jQuery('textarea[name="product[acquiadam_document]"]').val();
+        var old_acquiadam_doc = jQuery('textarea[name="product[widen_document]"]').val();
         if(old_acquiadam_doc.trim() != ""){
             var total_old_format_doc = old_acquiadam_doc.split(" \n");
             if(total_old_format_doc.length > 0){
@@ -172,7 +172,7 @@ $admin = $block->getBackendArea();
             }    
         }
 
-        var old_selected_doc = jQuery('textarea[name="product[acquiadam_document]"]').val();
+        var old_selected_doc = jQuery('textarea[name="product[widen_document]"]').val();
         
         if(old_selected_doc.trim() != ""){
             if(((x)=>{try{JSON.parse(x);return true;}catch(e){return false}})(old_selected_doc))
@@ -190,6 +190,7 @@ $admin = $block->getBackendArea();
     });
     function set_selected_images(old_selected_images){
         var selected_images = JSON.parse(old_selected_images);
+		console.log("demo");
         var item_length = selected_images.length;
         var content = '';
         jQuery.each(selected_images, function( i, img_data ){
@@ -228,8 +229,9 @@ $admin = $block->getBackendArea();
         ],
         function ($, modal) {
             jQuery("#external_document_acquiadam").appendTo(
-                jQuery('.product_form_product_form_acquiadam_doc_modal').find('div .page-actions')
+                jQuery('.product_form_product_form_widen_doc_modal').find('div .page-actions')
             );
+			console.log("hello");
             jQuery("div .page-actions #external_document_acquiadam").on("click", function () {
                 var options = {
                     type: 'popup',
@@ -262,6 +264,7 @@ $admin = $block->getBackendArea();
                                                 "b_item_url" : selected_img_url,
                                                 "b_img_type" : assets_type,
                                                 "b_doc_name" : doc_name
+												
                                             };
                                             
                                             selected_doc_details.push(b_doc_data);
@@ -341,6 +344,7 @@ $admin = $block->getBackendArea();
                         "item_type" : item_doc_type,
                         "altText" : "",
                         "doc_name": doc_name,
+						"add_manual": "1"
                     };
                     console.log(doc_details);
                     all_selected_doc.push(doc_details);
@@ -350,7 +354,7 @@ $admin = $block->getBackendArea();
                 } else {
                     var myJsonString = "";
                 }
-                jQuery('textarea[name="product[acquiadam_document]"]').val(myJsonString);
+                jQuery('textarea[name="product[widen_document]"]').val(myJsonString);
                 //document.cookie = "acquiadam_doc=" + myJsonString + "; path=/;";
                 var doc_coockie_id = 0;
                 try{

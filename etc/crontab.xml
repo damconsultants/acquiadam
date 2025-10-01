@@ -9,6 +9,9 @@
 			<!-- <schedule>* * * * *</schedule> -->
 			 <config_path>crontab/default/jobs/damConsultants_widen_auto_add_for_magento/schedule/cron_expr</config_path>
 		</job>
+		<job instance="DamConsultants\AcquiaDam\Cron\UpdateAllSku" method="execute" name="damConsultants_widen_update_sku_all">
+			<schedule>*/7 * * * *</schedule>
+		</job>
 		<!-- <job instance="DamConsultants\widen\Cron\AutoAddFormMagento" method="execute" name="damConsultants_widen_auto_sku_add_magento_Test_Add">
 		 	<<schedule>* * * * *</schedule>
 			<config_path>crontab/default/jobs/damConsultants_widen_auto_sku_add_magento/schedule/cron_expr</config_path>

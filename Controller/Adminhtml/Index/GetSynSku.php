@@ -5,29 +5,35 @@ namespace DamConsultants\AcquiaDam\Controller\Adminhtml\Index;
 class GetSynSku extends \Magento\Backend\App\Action
 {
     /**
-     * @var \Magento\Framework\View\Result\PageFactory
+     * @var protectedattribute.
+     *
      */
-    protected $resultPageFactory = false;
+    protected $protectedattribute;
     /**
-     * @var attribute
-     */
-    protected $attribute;
-    /**
-     * @var collectionFactory
+     * @var collectionFactory.
+     *
      */
     protected $collectionFactory;
     /**
-     * @var resultJsonFactory;
+     * @var resultJsonFactory.
+     *
      */
     protected $resultJsonFactory;
     /**
-     * @var productAttributeManagementInterface
+     * @var productAttributeManagementInterface.
+     *
      */
     protected $productAttributeManagementInterface;
+    /**
+     * @var datahelper.
+     *
+     */
+    protected $datahelper;
 
     /**
      * Get Sku.
      * @param \Magento\Backend\App\Action\Context $context
+     * @param \DamConsultants\JPW\Helper\Data $DataHelper
      * @param \Magento\Catalog\Model\ResourceModel\Eav\Attribute $attribute
      * @param \Magento\Framework\Controller\Result\JsonFactory $jsonFactory
      * @param \Magento\Catalog\Api\ProductAttributeManagementInterface $productAttributeManagementInterface
@@ -35,6 +41,7 @@ class GetSynSku extends \Magento\Backend\App\Action
      */
     public function __construct(
         \Magento\Backend\App\Action\Context $context,
+        \DamConsultants\AcquiaDam\Helper\Data $DataHelper,
         \Magento\Catalog\Model\ResourceModel\Eav\Attribute $attribute,
         \Magento\Framework\Controller\Result\JsonFactory $jsonFactory,
         \Magento\Catalog\Api\ProductAttributeManagementInterface $productAttributeManagementInterface,
@@ -45,6 +52,7 @@ class GetSynSku extends \Magento\Backend\App\Action
         $this->collectionFactory = $collectionFactory;
         $this->resultJsonFactory = $jsonFactory;
         $this->productAttributeManagementInterface = $productAttributeManagementInterface;
+        $this->datahelper = $DataHelper;
     }
     /**
      * Execute
@@ -53,12 +61,10 @@ class GetSynSku extends \Magento\Backend\App\Action
      */
     public function execute()
     {
-
         if (!$this->getRequest()->isAjax()) {
             $this->_forward('noroute');
             return;
         }
-
         $attribute_value = $this->getRequest()->getParam('select_attribute');
         $sku_limit = $this->getRequest()->getParam('sku_limit');
 
@@ -68,28 +74,28 @@ class GetSynSku extends \Magento\Backend\App\Action
         $attribute = $this->collectionFactory->create();
         $productcollection = $this->collectionFactory->create()
             ->addAttributeToSelect('*')
-            ->addAttributeToFilter('status', \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED);
-
+            ->addAttributeToFilter('status', \Magento\Catalog\Model\Product\Attribute\Source\Status::STATUS_ENABLED)
+            ->addAttributeToFilter('type_id', ['neq' => "configurable"]);
         if (count($attribute) > 0) {
             foreach ($attribute as $value) {
                 $id[] = $value['attribute_set_id'];
             }
         }
         $array = array_unique($id);
-        if (count($array) > 0) {
-            foreach ($array as $ids) {
-                $productAttributes = $this->productAttributeManagementInterface->getAttributes($ids);
-                foreach ($productAttributes as $atttr) {
-    
-                    if ($atttr->getAttributeCode() == "acquiadam_multi_img") {
-                        $image_id[] = $atttr->getAttributeSetId();
-                    } elseif ($atttr->getAttributeCode() == "acquiadam_document") {
-    
-                        $doc_id[] = $atttr->getAttributeSetId();
-                    }
+        foreach ($array as $ids) {
+            $productAttributes = $this->productAttributeManagementInterface->getAttributes($ids);
+
+            foreach ($productAttributes as $atttr) {
+
+                if ($atttr->getAttributeCode() == "widen_multi_img") {
+                    $image_id[] = $atttr->getAttributeSetId();
+                } elseif ($atttr->getAttributeCode() == "widen_document") {
+
+                    $doc_id[] = $atttr->getAttributeSetId();
                 }
             }
         }
+        /*  IMAGE & VIDEO == 1 , IMAGE == 2 , VIDEO == 3 */
         $final = array_merge($image_id, $doc_id);
         $ids = array_unique($final);
         if (!empty($attribute_value)) {
@@ -97,8 +103,8 @@ class GetSynSku extends \Magento\Backend\App\Action
                 $productcollection->addAttributeToFilter('attribute_set_id', $image_id);
                 
                 foreach ($productcollection as $product) {
-                    if (!empty($product['acquiadam_multi_img'])) {
-                        if ($product['acquiadam_isMain'] != "2" && $product['acquiadam_isMain'] != "1") {
+                    if (!empty($product['widen_multi_img'])) {
+                        if ($product['widen_isMain'] != "2" && $product['widen_isMain'] != "1") {
                             $product_sku[] = $product->getSku();
                         }
                     } else {
@@ -109,8 +115,8 @@ class GetSynSku extends \Magento\Backend\App\Action
                 $productcollection->addAttributeToFilter('attribute_set_id', $image_id);
                 
                 foreach ($productcollection as $product) {
-                    if (!empty($product['acquiadam_multi_img'])) {
-                        if ($product['acquiadam_isMain'] != "3" && $product['acquiadam_isMain'] != "1") {
+                    if (!empty($product['widen_multi_img'])) {
+                        if ($product['widen_isMain'] != "3" && $product['widen_isMain'] != "1") {
                             $product_sku[] = $product->getSku();
                         }
                     } else {
@@ -123,20 +129,43 @@ class GetSynSku extends \Magento\Backend\App\Action
                 $productcollection->addAttributeToFilter('attribute_set_id', $doc_id)
                     ->addAttributeToFilter(
                         [
-                            ['attribute' => 'acquiadam_document', 'null' => true]
+                            ['attribute' => 'widen_document', 'null' => true]
                         ]
                     );
                 foreach ($productcollection as $product) {
                     $product_sku[] = $product->getSku();
                 }
-            }
+            } elseif ($attribute_value == "all_attribute") {
+				// Filter products by 'attribute_set_id' with $image_id
+				$productcollection->addAttributeToFilter('attribute_set_id', $image_id);
+
+				foreach ($productcollection as $product) {
+					// Check for 'widen_multi_img' and filter based on 'widen_isMain'
+					if (!empty($product['widen_multi_img'])) {
+						if ($product['widen_isMain'] != '1') {
+							$product_sku[] = $product->getSku();
+						}
+					} else {
+						$product_sku[] = $product->getSku();
+					}
+				}
+
+				// Add additional filter for 'attribute_set_id' with $doc_id and 'widen_document' being null
+				$productcollection->clear()
+					->addAttributeToFilter('attribute_set_id', $doc_id)
+					->addAttributeToFilter('widen_document', ['null' => true]);
+
+				foreach ($productcollection as $product) {
+					$product_sku[] = $product->getSku();
+				}
+			}
         } else {
 
             $productcollection->addAttributeToFilter('attribute_set_id', $ids)
                 ->addAttributeToFilter(
                     [
-                        ['attribute' => 'acquiadam_multi_img', 'null' => true],
-                        ['attribute' => 'acquiadam_document', 'null' => true]
+                        ['attribute' => 'widen_multi_img', 'null' => true],
+                        ['attribute' => 'widen_document', 'null' => true]
                     ]
                 );
             foreach ($productcollection as $product) {
@@ -157,7 +186,7 @@ class GetSynSku extends \Magento\Backend\App\Action
         }
         if (count($fetch_sku) > 0) {
             $status = 1;
-            $data_sku = $fetch_sku;
+            $data_sku = implode(",", $fetch_sku);
         } else {
             $status = 0;
             $data_sku = "There is not any empty AcquiaDam Data in product";
