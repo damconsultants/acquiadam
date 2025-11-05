@@ -188,7 +188,7 @@ class SyncSku extends \Magento\Backend\App\Action
 					"style_number" => $_product->getStyle()
 				];
 			}
-
+			
 			// Call API
 			$response = $this->_helperData->getAcquiaDamImageSyncWithProperties($colorStyle, $propertiesDetails);
 			$decoded  = json_decode($response, true);
@@ -332,9 +332,9 @@ class SyncSku extends \Magento\Backend\App\Action
 				"height"                => $height,
 				"width"                 => $width,
 				"asset_order"           => $data['asset_order'],
+				"extra_details"         => isset($data['extra_details'])?$data['extra_details']:"",
 				"is_import"             => "0"
 			];
-
 			if (!in_array($baseUrl, $existingUrls)) {
 				$diffImageDetail[] = $imgData;
 				$total_new_value = count($diffImageDetail);
@@ -368,14 +368,14 @@ class SyncSku extends \Magento\Backend\App\Action
 						}
 					}
 				}
+				$this->logAsset($sku, $baseUrl, '1');
 			}
 		}
-
+		
 		$merged = array_merge($imageDetail, $diffImageDetail);
-
+		
 		$flag = $this->getFlag(array_column($merged, 'item_type'));
 		$json = json_encode($merged, true);
-
 		if (!empty($extra['is_mg_import'])) {
 			$json = $this->uploadImageToProduct($json, $productId);
 		}
@@ -426,6 +426,7 @@ class SyncSku extends \Magento\Backend\App\Action
 				"height"                => "",
 				"width"                 => "",
 				"asset_order"           => $data['asset_order'],
+				"extra_details"         => isset($data['extra_details'])?$data['extra_details']:"",
 				"is_import"             => "0"
 			];
 			$this->logAsset($sku, $url, '3');

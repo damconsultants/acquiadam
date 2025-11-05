@@ -151,6 +151,22 @@ if ($block->getProduct()->getTypeId() === \Magento\ConfigurableProduct\Model\Pro
 
 <script>
     require(['jquery'], function ($) {
+        jQuery(document).ready(function() {
+            // Check if any video thumb exists
+            let checkVideoThumb = setInterval(function() {
+                if (jQuery('.video-thumb-icon').length) {
+                    console.log("Video thumbnails found: " + jQuery('.video-thumb-icon').length);
+
+                    // Replace each video thumbnail image
+                    jQuery('.video-thumb-icon img').each(function() {
+                        jQuery(this).attr('src', 'https://example.com/custom-thumbnail.jpg');
+                    });
+                    clearInterval(checkVideoThumb);
+                } else {
+                    console.log("No video thumbnails found.");
+                }
+            }, 500);
+        });
         $(document).on('gallery:loaded', function () {
             var $fotorama = jQuery('div.gallery-placeholder > div.fotorama');
             var fotorama = $fotorama.data('fotorama');

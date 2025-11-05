@@ -6,6 +6,8 @@ $default_image_role_value = $block_data['image_role_selected'];
 $default_image_alt_text = $block_data['image_alt_text'];
 $default_color = $block_data['image_color'];
 $default_order = $block_data['order'];
+$default_subtype = $block_data['subtypes'];
+$default_lead = $block_data['leads'];
 $url = $block->getMainUrl();
 $syncMetaUrl = $url."acquiadam/index/synmetaproperty";
 
@@ -14,6 +16,8 @@ $image_role_properites = "";
 $alt_properites = "";
 $color_properites = "";
 $order_properites = "";
+$subtype_properites = "";
+$lead_properites = "";
 if (count($get_metaData) > 0) {
     foreach ($get_metaData as $newKey => $newValue) {
         $sku_checked = "";
@@ -22,6 +26,8 @@ if (count($get_metaData) > 0) {
 		$color_checked = "";
 		$order_checked = "";
 		$rollover_checked = "";
+        $subtype_checked = "";
+        $lead_checked = "";
         if ($default_sku_value == $newKey) {
             $sku_checked = "selected";
         } elseif ($default_image_role_value == $newKey) {
@@ -32,6 +38,10 @@ if (count($get_metaData) > 0) {
             $color_checked = "selected";
         } elseif ($default_order == $newKey) {
             $order_checked = "selected";
+        } elseif ($default_subtype == $newKey) {
+            $subtype_checked = "selected";
+        } elseif ($default_lead == $newKey) {
+            $lead_checked = "selected";
         }
         $sku_properites .= '<option value="' . $newKey . '" ' . $sku_checked . ' >' .
                         $block->escapeHtml($newValue) .
@@ -43,6 +53,12 @@ if (count($get_metaData) > 0) {
                         $block->escapeHtml($newValue) .
                         '</option>';
 		$order_properites .= '<option value="' . $newKey . '" ' . $order_checked . ' >' .
+                        $block->escapeHtml($newValue) .
+                        '</option>';
+        $subtype_properites .= '<option value="' . $newKey . '" ' . $subtype_checked . ' >' .
+                        $block->escapeHtml($newValue) .
+                        '</option>';
+        $lead_properites .= '<option value="' . $newKey . '" ' . $lead_checked . ' >' .
                         $block->escapeHtml($newValue) .
                         '</option>';
         $alt_properites .= '<option value="' . $newKey . '" ' . $alt_checked . ' >' .
@@ -111,6 +127,30 @@ if (count($get_metaData) > 0) {
 						<select class="selectbox_item" id="acquiadam_property_order" name="select_meta_tag[]">
 							<option value="0">Select The option</option>
 							<?= $order_properites; ?>
+						</select>
+				</div>
+            </div>
+
+            <div class="product-imp-list">
+                <h4 class="product-imp-label"> The Meta Property Configration For the Asset Sub Type :-</h4>
+				<div class="form-check form-check-inline">
+						<p class="form-check-label"> Property List:- </p>
+						<input type="hidden" name="system_slug[]" value="subtype" />
+						<select class="selectbox_item" id="acquiadam_property_subtype" name="select_meta_tag[]">
+							<option value="0">Select The option</option>
+							<?= $subtype_properites; ?>
+						</select>
+				</div>
+            </div>
+
+            <div class="product-imp-list">
+                <h4 class="product-imp-label"> The Meta Property Configration For the Lead Configurable :-</h4>
+				<div class="form-check form-check-inline">
+						<p class="form-check-label"> Property List:- </p>
+						<input type="hidden" name="system_slug[]" value="lead" />
+						<select class="selectbox_item" id="acquiadam_property_lead" name="select_meta_tag[]">
+							<option value="0">Select The option</option>
+							<?= $lead_properites; ?>
 						</select>
 				</div>
             </div>

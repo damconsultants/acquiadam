@@ -325,6 +325,7 @@ class UpdateAllSku
                                         "height" => $height,
                                         "width"=> $width,
 										"asset_order" => $data_value['asset_order'],
+										"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                         "is_import" => "0"
                                     ];
 									$total_new_value = count($diff_image_detail);
@@ -352,6 +353,7 @@ class UpdateAllSku
                                         "height" => $height,
                                         "width"=> $width,
 										"asset_order" => $data_value['asset_order'],
+										"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                         "is_import" => "0"
                                     ];
 									$total_new_value = count($image_detail);
@@ -395,6 +397,7 @@ class UpdateAllSku
                                     "height" => $img['height'],
                                     "width"=> $img['width'],
 									"asset_order" => $image_detail[$key1]['asset_order'],
+									"extra_details" => isset($image_detail['extra_details'])?$image_detail['extra_details']:"",
                                     "is_import" => $img['is_import']
                                 ];
                             }
@@ -500,6 +503,7 @@ class UpdateAllSku
                                 "height" => $height,
                                 "width"=> $width,
 								"asset_order" => $data_value['asset_order'],
+								"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                 "is_import" => "0"
                             ];
 							$total_new_value = count($image_detail);
@@ -586,6 +590,7 @@ class UpdateAllSku
                                         "height" => "",
                                         "width"=> "",
                                         "asset_order" => $data_value['asset_order'],
+										"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                         "is_import" => "0"
                                     ];
                                     $data_video_data = [
@@ -646,6 +651,7 @@ class UpdateAllSku
                                 "height" => "",
                                 "width"=> "",
 								"asset_order" => $data_value['asset_order'],
+								"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                 "is_import" => "0"
                             ];
                             $data_video_data = [

@@ -267,6 +267,7 @@ class FetchNullDataToMagento
                                     "height" => $height,
                                     "width"=> $width,
                                     "asset_order" => $data_value['asset_order'],
+									"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                     "is_import" => "0"
 
                                 ];
@@ -374,6 +375,7 @@ class FetchNullDataToMagento
                                 "height" => $height,
                                 "width"=> $width,
                                 "asset_order" => $data_value['asset_order'],
+								"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                 "is_import" => "0"
         
                             ];

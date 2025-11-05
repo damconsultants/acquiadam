@@ -118,12 +118,20 @@ class Index extends \Magento\Backend\Block\Template
 			$response_data['order'] = isset($properties_details["orders"]["widen_property_slug"])
             ? $properties_details["orders"]["widen_property_slug"]
             : '0';
+            $response_data['subtypes'] = isset($properties_details["subtype"]["widen_property_slug"])
+            ? $properties_details["subtype"]["widen_property_slug"]
+            : '0';
+            $response_data['leads'] = isset($properties_details["lead"]["widen_property_slug"])
+            ? $properties_details["lead"]["widen_property_slug"]
+            : '0';
         } else {
             $response_data['style_selected'] = '0';
             $response_data['image_role_selected'] = '0';
             $response_data['image_alt_text'] = '0';
             $response_data['image_color'] = '0';
 			$response_data['order'] = '0';
+            $response_data['subtypes'] = '0';
+            $response_data['leads'] = '0';
         }
         return $response_data;
     }

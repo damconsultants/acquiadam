@@ -322,6 +322,7 @@ class AutoAddFromMagento
                                     "height" => $height,
                                     "width"=> $width,
                                     "asset_order" => $data_value['asset_order'],
+									"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                     "is_import" => "0"
                                 ];
                             } else {
@@ -335,6 +336,7 @@ class AutoAddFromMagento
                                     "height" => $height,
                                     "width"=> $width,
                                     "asset_order" => $data_value['asset_order'],
+									"extra_details" => isset($data_value['extra_details'])?$data_value['extra_details']:"",
                                     "is_import" => "0"
                                 ];
                             }
@@ -361,6 +363,7 @@ class AutoAddFromMagento
                                 "height" => $img['height'],
                                 "width"=> $img['width'],
                                 "asset_order" => $image_detail[$item_key]['asset_order'],
+								"extra_details" => isset($image_detail['extra_details'])?$image_detail['extra_details']:"",
                                 "is_import" => $img['is_import']
                             ];
                         }
